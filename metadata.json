@@ -1,0 +1,6 @@
+{
+  "name": "Pulse",
+  "description": "The single, human-friendly home for all your commitments. Import documents, emails, and screenshots directly into your Life Inbox and let AI prioritize your day.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
