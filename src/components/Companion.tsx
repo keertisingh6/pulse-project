@@ -22,6 +22,8 @@ export const Companion: React.FC = () => {
     }
   };
 
+  const displayName = state.user?.name || state.userName || 'Friend';
+
   // Human-friendly contextual messaging from Kairo
   const getGreeting = () => {
     const hours = new Date().getHours();
@@ -29,7 +31,7 @@ export const Companion: React.FC = () => {
     if (hours >= 12 && hours < 17) timeGreeting = "Good afternoon";
     if (hours >= 17) timeGreeting = "Good evening";
 
-    return `${timeGreeting}, ${state.userName} 👋`;
+    return `${timeGreeting}, ${displayName} 👋`;
   };
 
   const getCompanionMessage = () => {

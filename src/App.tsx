@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { PulseProvider, usePulse } from './context/PulseContext';
+import { LoginPage } from './components/LoginPage';
 import { Companion } from './components/Companion';
 import { CommitmentsFeed } from './components/CommitmentsFeed';
 import { LifeInbox } from './components/LifeInbox';
@@ -9,7 +10,7 @@ import { CalendarView } from './components/CalendarView';
 import { InsightsView } from './components/InsightsView';
 import { 
   Inbox, Sparkles, Clock, Calendar as CalendarIcon, 
-  BarChart2, RefreshCw, Zap, Heart, Shield
+  BarChart2, RefreshCw, Zap, Heart, Shield, LogOut, ChevronDown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -17,13 +18,35 @@ type TabType = 'inbox' | 'plan' | 'timer' | 'calendar' | 'insights';
 
 function PulseApp() {
   const [activeTab, setActiveTab] = useState<TabType>('inbox');
-  const { state, resetAllData } = usePulse();
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const { state, resetAllData, resetAuth, logout } = usePulse();
+
+  // Strict Authentication Guard:
+  // Fresh or unauthenticated sessions ALWAYS display the LoginPage
+  if (!state.isAuthenticated || !state.user) {
+    return <LoginPage />;
+  }
 
   const handleReset = () => {
     if (confirm("Reset demo commitments and logs back to fresh states?")) {
       resetAllData();
     }
   };
+
+  const handleResetAuth = () => {
+    if (confirm("Log out and reset authentication back to clean Login Page?")) {
+      resetAuth();
+    }
+  };
+
+  const handleLogout = () => {
+    setShowUserMenu(false);
+    logout();
+  };
+
+  const userInitial = state.user?.name 
+    ? state.user.name.charAt(0).toUpperCase() 
+    : (state.userName ? state.userName.charAt(0).toUpperCase() : 'U');
 
   return (
     <div className="min-h-screen bg-[#FAF9F6] text-[#1A1A1B] flex flex-col selection:bg-[#7C9070]/20">
@@ -49,22 +72,72 @@ function PulseApp() {
             </div>
           </div>
 
-          {/* Quick Metrics Bar */}
-          <div className="flex items-center gap-4">
+          {/* Quick Metrics Bar & Profile Controls */}
+          <div className="flex items-center gap-3">
             {/* Active streak */}
-            <div className="flex items-center gap-1 text-xs font-semibold bg-[#7C9070]/10 text-[#7C9070] px-3 py-1 rounded-full border border-[#7C9070]/20">
+            <div className="hidden sm:flex items-center gap-1 text-xs font-semibold bg-[#7C9070]/10 text-[#7C9070] px-3 py-1 rounded-full border border-[#7C9070]/20">
               <Zap className="w-3.5 h-3.5 text-[#7C9070] fill-[#7C9070]/10" />
               <span>{state.streakDays}d Streak</span>
             </div>
 
-            {/* Profile Avatar */}
-            <div className="flex items-center gap-2 border border-[#EBE9E0] p-1 pr-3 rounded-full bg-[#F5F1E9]">
-              <div className="w-6.5 h-6.5 rounded-full bg-[#E5D5C8] border border-[#EBE9E0] flex items-center justify-center text-[10px] font-bold select-none text-[#1A1A1B]/80">
-                K
-              </div>
-              <span className="text-xs font-bold text-[#1A1A1B]/80">
-                {state.userName}
-              </span>
+            {/* Direct visible Log Out button */}
+            <button
+              onClick={handleLogout}
+              title="Log out of your workspace"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#1A1A1B]/70 hover:text-rose-600 hover:bg-rose-50 border border-[#EBE9E0] hover:border-rose-200 rounded-full transition-all cursor-pointer bg-white"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Log Out</span>
+            </button>
+
+            {/* Profile Avatar & Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                className="flex items-center gap-2 border border-[#EBE9E0] p-1 pr-2.5 rounded-full bg-[#F5F1E9] hover:bg-[#ebe6dc] transition-colors cursor-pointer"
+              >
+                {state.user?.avatar ? (
+                  <img
+                    src={state.user.avatar}
+                    alt={state.user.name}
+                    className="w-6.5 h-6.5 rounded-full object-cover border border-[#EBE9E0]"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <div className="w-6.5 h-6.5 rounded-full bg-[#E5D5C8] border border-[#EBE9E0] flex items-center justify-center text-[10px] font-bold select-none text-[#1A1A1B]/80">
+                    {userInitial}
+                  </div>
+                )}
+                <span className="text-xs font-bold text-[#1A1A1B]/80 max-w-[100px] truncate">
+                  {state.user?.name || state.userName}
+                </span>
+                <ChevronDown className="w-3 h-3 text-[#1A1A1B]/40" />
+              </button>
+
+              {/* User Dropdown Menu */}
+              {showUserMenu && (
+                <div 
+                  className="absolute right-0 mt-2 w-56 bg-white border border-[#EBE9E0] rounded-2xl shadow-lg p-2 z-50 space-y-1"
+                  onMouseLeave={() => setShowUserMenu(false)}
+                >
+                  <div className="p-2 border-b border-[#EBE9E0]">
+                    <p className="text-xs font-bold text-[#1A1A1B] truncate">{state.user?.name || state.userName}</p>
+                    <p className="text-[11px] text-[#1A1A1B]/50 truncate">{state.user?.email || `${state.userName.toLowerCase()}@pulse.app`}</p>
+                    <div className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-semibold text-[#7C9070] bg-[#7C9070]/10 px-2 py-0.5 rounded-full">
+                      <Shield className="w-2.5 h-2.5" />
+                      <span>{state.user?.provider === 'google' ? 'Google Account' : state.user?.provider === 'guest' ? 'Guest Workspace' : 'Email Account'}</span>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer text-left"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span>Log Out</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -156,17 +229,25 @@ function PulseApp() {
             <span>Pulse: Next-Generation Life Inbox.</span>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleResetAuth}
+              className="flex items-center gap-1.5 hover:text-rose-600 hover:border-rose-200 bg-[#FAF9F6] border border-[#EBE9E0] px-3 py-1.5 rounded-xl cursor-pointer transition-colors text-xs"
+              title="Completely reset auth and return to login page"
+            >
+              <LogOut className="w-3 h-3" />
+              <span>Reset Auth (Log Out)</span>
+            </button>
             <button
               onClick={handleReset}
-              className="flex items-center gap-1.5 hover:text-[#7C9070] bg-[#FAF9F6] border border-[#EBE9E0] px-3 py-1.5 rounded-xl cursor-pointer transition-colors"
+              className="flex items-center gap-1.5 hover:text-[#7C9070] bg-[#FAF9F6] border border-[#EBE9E0] px-3 py-1.5 rounded-xl cursor-pointer transition-colors text-xs"
               title="Reset presets and mock data"
             >
               <RefreshCw className="w-3 h-3" />
-              <span>Reset Demo State</span>
+              <span>Reset Demo Data</span>
             </button>
-            <span>•</span>
-            <span className="flex items-center gap-1 font-mono text-[10px]">
+            <span className="hidden sm:inline">•</span>
+            <span className="hidden sm:flex items-center gap-1 font-mono text-[10px]">
               <Shield className="w-3.5 h-3.5 text-[#1A1A1B]/40" /> Secure Server-side extraction active
             </span>
           </div>

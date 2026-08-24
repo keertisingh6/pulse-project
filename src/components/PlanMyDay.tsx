@@ -9,8 +9,9 @@ import { motion } from 'motion/react';
 
 export const PlanMyDay: React.FC = () => {
   const { state, generateDailyPlan, togglePlanItem, loading } = usePulse();
+  const displayName = state.user?.name || state.userName || 'Friend';
   const [advice, setAdvice] = useState<string>(
-    `Hi ${state.userName}! I've scheduled your commitments into small, gentle cycles of focus and relaxation. Let's make progress together.`
+    `Hi ${displayName}! I've scheduled your commitments into small, gentle cycles of focus and relaxation. Let's make progress together.`
   );
 
   const activeCommitments = state.commitments.filter(c => !c.completed);

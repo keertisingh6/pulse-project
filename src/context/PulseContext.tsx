@@ -1,10 +1,15 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Commitment, FocusSession, DailyPlanItem, PulseState, CommitmentType } from '../types';
+import { Commitment, FocusSession, DailyPlanItem, PulseState, CommitmentType, PulseUser } from '../types';
 
 interface PulseContextType {
   state: PulseState;
   loading: boolean;
   error: string | null;
+  login: (email: string, password?: string, name?: string) => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
+  loginAsGuest: (name?: string) => void;
+  signup: (name: string, email: string, password?: string) => Promise<void>;
+  logout: () => void;
   addCommitment: (commitment: Omit<Commitment, 'id' | 'createdAt'>) => void;
   toggleCommitment: (id: string) => void;
   deleteCommitment: (id: string) => void;
@@ -14,6 +19,7 @@ interface PulseContextType {
   addFocusSession: (session: Omit<FocusSession, 'id' | 'completedAt'>) => void;
   updateUserName: (name: string) => void;
   resetAllData: () => void;
+  resetAuth: () => void;
   clearError: () => void;
 }
 
@@ -183,23 +189,163 @@ export const PulseProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const localData = localStorage.getItem('pulse_state');
     if (localData) {
       try {
-        return JSON.parse(localData);
+        const parsed = JSON.parse(localData);
+        // Only consider authenticated if a user object exists and isAuthenticated is true
+        if (parsed.user && parsed.isAuthenticated === true) {
+          return {
+            ...parsed,
+            user: parsed.user,
+            isAuthenticated: true,
+            userName: parsed.user.name || parsed.userName || 'Keerti'
+          };
+        }
+        return {
+          ...parsed,
+          user: null,
+          isAuthenticated: false,
+          userName: ''
+        };
       } catch (e) {
         console.error('Failed to parse localStorage data', e);
       }
     }
+    // Fresh session: always starts unauthenticated with user: null and isAuthenticated: false
     return {
+      user: null,
+      isAuthenticated: false,
       commitments: DEFAULT_COMMITMENTS,
       focusSessions: DEFAULT_FOCUS_SESSIONS,
       dailyPlan: DEFAULT_DAILY_PLAN,
       lastPlanDate: '2026-06-24',
       streakDays: 4,
-      userName: 'Keerti'
+      userName: ''
     };
   });
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Authentication Handlers
+  const login = async (email: string, _password?: string, name?: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 400));
+      const extractedName = name || email.split('@')[0] || 'User';
+      const cleanName = extractedName.charAt(0).toUpperCase() + extractedName.slice(1);
+      const user: PulseUser = {
+        id: 'usr_' + Math.random().toString(36).substring(2, 9),
+        name: cleanName,
+        email: email,
+        provider: 'email',
+        createdAt: new Date().toISOString()
+      };
+      setState(prev => ({
+        ...prev,
+        user,
+        isAuthenticated: true,
+        userName: cleanName
+      }));
+    } catch (err: any) {
+      setError(err.message || 'Login failed. Please verify credentials.');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loginWithGoogle = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 400));
+      const user: PulseUser = {
+        id: 'usr_g_' + Math.random().toString(36).substring(2, 9),
+        name: 'Keerti Singh',
+        email: 'singhkeerti2007@gmail.com',
+        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+        provider: 'google',
+        createdAt: new Date().toISOString()
+      };
+      setState(prev => ({
+        ...prev,
+        user,
+        isAuthenticated: true,
+        userName: 'Keerti'
+      }));
+    } catch (err: any) {
+      setError('Google sign-in could not be completed.');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loginAsGuest = (name: string = 'Keerti') => {
+    const user: PulseUser = {
+      id: 'usr_demo',
+      name: name,
+      email: `${name.toLowerCase().replace(/\s+/g, '')}@pulse.app`,
+      provider: 'guest',
+      createdAt: new Date().toISOString()
+    };
+    setState(prev => ({
+      ...prev,
+      user,
+      isAuthenticated: true,
+      userName: name
+    }));
+  };
+
+  const signup = async (name: string, email: string, _password?: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 400));
+      const user: PulseUser = {
+        id: 'usr_' + Math.random().toString(36).substring(2, 9),
+        name: name || 'User',
+        email: email,
+        provider: 'email',
+        createdAt: new Date().toISOString()
+      };
+      setState(prev => ({
+        ...prev,
+        user,
+        isAuthenticated: true,
+        userName: name || 'User'
+      }));
+    } catch (err: any) {
+      setError(err.message || 'Sign up failed. Please try again.');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const logout = () => {
+    localStorage.removeItem('pulse_state');
+    setState(prev => ({
+      ...prev,
+      user: null,
+      isAuthenticated: false,
+      userName: ''
+    }));
+  };
+
+  const resetAuth = () => {
+    localStorage.removeItem('pulse_state');
+    setState({
+      user: null,
+      isAuthenticated: false,
+      commitments: DEFAULT_COMMITMENTS,
+      focusSessions: DEFAULT_FOCUS_SESSIONS,
+      dailyPlan: DEFAULT_DAILY_PLAN,
+      lastPlanDate: '2026-06-24',
+      streakDays: 4,
+      userName: ''
+    });
+  };
 
   // Sync state to localStorage
   useEffect(() => {
@@ -416,14 +562,14 @@ export const PulseProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const resetAllData = () => {
-    setState({
+    setState(prev => ({
+      ...prev,
       commitments: DEFAULT_COMMITMENTS,
       focusSessions: DEFAULT_FOCUS_SESSIONS,
       dailyPlan: DEFAULT_DAILY_PLAN,
       lastPlanDate: '2026-06-24',
-      streakDays: 4,
-      userName: 'Keerti'
-    });
+      streakDays: 4
+    }));
   };
 
   const clearError = () => setError(null);
@@ -434,6 +580,11 @@ export const PulseProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         state,
         loading,
         error,
+        login,
+        loginWithGoogle,
+        loginAsGuest,
+        signup,
+        logout,
         addCommitment,
         toggleCommitment,
         deleteCommitment,
@@ -443,6 +594,7 @@ export const PulseProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         addFocusSession,
         updateUserName,
         resetAllData,
+        resetAuth,
         clearError
       }}
     >

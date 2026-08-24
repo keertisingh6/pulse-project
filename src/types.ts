@@ -81,7 +81,18 @@ export interface DailyPlanItem {
   isCompleted: boolean;
 }
 
+export interface PulseUser {
+  id: string;
+  name: string;
+  email: string;
+  avatar?: string;
+  provider: 'email' | 'google' | 'guest';
+  createdAt: string;
+}
+
 export interface PulseState {
+  user: PulseUser | null;
+  isAuthenticated: boolean;
   commitments: Commitment[];
   focusSessions: FocusSession[];
   dailyPlan: DailyPlanItem[] | null;
