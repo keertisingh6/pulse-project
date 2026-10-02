@@ -108,7 +108,7 @@ For each commitment found, extract:
     contents.push({ text: textPrompt });
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
+      model: "gemini-3.8-flash",
       contents: contents,
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
@@ -172,7 +172,7 @@ app.post("/api/gemini/plan-day", async (req, res) => {
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
+      model: "gemini-3.8-flash",
       contents: `
 Generate a balanced daily plan for ${userName || "Keerti"} based on these active commitments:
 ${JSON.stringify(commitments)}
