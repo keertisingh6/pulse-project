@@ -117,7 +117,7 @@ export const OnboardingIllustration: React.FC = () => {
         <rect x="315" y="142" width="18" height="6" rx="2" fill="#F4F1ED" />
       </g>
 
-      {/* Pulse Centerpiece (Life Inbox Portal) */}
+      {/* Pulse Centerpiece (Workspace Portal) */}
       <g>
         <rect x="150" y="120" width="100" height="70" rx="16" fill="#1e1b18" />
         {/* Soft UI details */}

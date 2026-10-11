@@ -1,23 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { usePulse } from '../context/PulseContext';
 import { Commitment, CommitmentType } from '../types';
 import { 
   Plus, Search, Clock, ShieldAlert, CheckCircle, 
   Trash2, FileText, ChevronDown, ChevronUp, Sparkles, Filter,
-  MapPin, Calendar, Users, AlertTriangle, Check, Bell, Send, ShieldCheck, Mail, Phone, MessageSquare
+  MapPin, Calendar, Users, AlertTriangle, Check, Bell, Send, ShieldCheck, Mail, Phone, MessageSquare, Download
 } from 'lucide-react';
+import { downloadICSFile } from '../utils/icsExport';
 import { EmptyStateIllustration } from './Illustrations';
-
-// Simulated current context date
-const TODAY_CONTEXT = new Date('2026-06-25T07:19:00-07:00'); // Thursday, June 25, 2026 7:19 AM
+import { 
+  parseTaskDeadline, 
+  isTaskOverdue, 
+  getDeadlineRelativeText, 
+  formatDeadlineDisplay, 
+  getLocalTodayDateString 
+} from '../utils/deadlineUtils';
 
 const getCategoryEmoji = (type: CommitmentType) => {
   switch (type) {
     case 'Assignment': return '📚';
+    case 'Exam': return '📝';
+    case 'Class': return '🏫';
     case 'Meeting': return '💼';
     case 'Bill': return '💳';
     case 'Appointment': return '🩺';
     case 'Event': return '🎉';
+    case 'Interview': return '🎯';
+    case 'Task': return '✅';
+    case 'Personal': return '🌿';
     case 'Travel': return '✈';
     default: return '📌';
   }
@@ -26,36 +36,22 @@ const getCategoryEmoji = (type: CommitmentType) => {
 const getCategoryStyles = (type: CommitmentType) => {
   switch (type) {
     case 'Assignment': return 'bg-rose-50 text-rose-600 border-rose-100';
+    case 'Exam': return 'bg-rose-100 text-rose-700 border-rose-200';
+    case 'Class': return 'bg-amber-50 text-amber-700 border-amber-100';
     case 'Meeting': return 'bg-sky-50 text-sky-600 border-sky-100';
     case 'Bill': return 'bg-emerald-50 text-emerald-600 border-emerald-100';
     case 'Appointment': return 'bg-purple-50 text-purple-600 border-purple-100';
     case 'Event': return 'bg-orange-50 text-orange-600 border-orange-100';
+    case 'Interview': return 'bg-blue-50 text-blue-700 border-blue-100';
+    case 'Task': return 'bg-slate-50 text-slate-700 border-slate-100';
+    case 'Personal': return 'bg-[#7C9070]/10 text-[#7C9070] border-[#7C9070]/20';
     case 'Travel': return 'bg-indigo-50 text-indigo-600 border-indigo-100';
     default: return 'bg-slate-50 text-slate-600 border-slate-100';
   }
 };
 
-// Computes dynamic commitment health status & action plan
-const getCommitmentHealth = (c: Commitment) => {
-  const today = TODAY_CONTEXT;
-  const dueParts = c.dueDate.split('-');
-  const dueYear = parseInt(dueParts[0], 10);
-  const dueMonth = parseInt(dueParts[1], 10) - 1;
-  const dueDay = parseInt(dueParts[2], 10);
-  
-  let dueTimeHour = 12;
-  let dueTimeMin = 0;
-  if (c.dueTime) {
-    const timeParts = c.dueTime.split(':');
-    dueTimeHour = parseInt(timeParts[0], 10);
-    dueTimeMin = parseInt(timeParts[1], 10);
-  }
-  
-  const dueDateTime = new Date(dueYear, dueMonth, dueDay, dueTimeHour, dueTimeMin);
-  const diffMs = dueDateTime.getTime() - today.getTime();
-  const hoursLeft = diffMs / (1000 * 60 * 60);
-  const daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-  
+// Computes dynamic commitment health status & action plan with strict timezone & deadline correctness
+const getCommitmentHealth = (c: Commitment, now: Date = new Date()) => {
   if (c.completed) {
     return {
       status: 'Ready ✅',
@@ -68,10 +64,17 @@ const getCommitmentHealth = (c: Commitment) => {
     };
   }
 
+  const dueDateTime = parseTaskDeadline(c.dueDate, c.dueTime);
+  const diffMs = dueDateTime.getTime() - now.getTime();
+  const hoursLeft = diffMs / (1000 * 60 * 60);
+  const daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+  // If complete deadline (date + time) has passed
   if (diffMs < 0) {
+    const overdueDays = Math.max(1, Math.floor(Math.abs(diffMs) / (1000 * 60 * 60 * 24)));
     return {
       status: 'Overdue 🚨',
-      message: `Passed due deadline by ${Math.abs(daysLeft)} days.`,
+      message: `Passed due deadline by ${overdueDays} day${overdueDays > 1 ? 's' : ''}.`,
       hoursLeft: hoursLeft,
       isTight: true,
       isOverdue: true,
@@ -85,13 +88,12 @@ const getCommitmentHealth = (c: Commitment) => {
   const effortMin = c.effortMinutes || 60;
   const effortHours = effortMin / 60;
 
-  if (c.type === 'Assignment') {
+  if (c.type === 'Assignment' || c.type === 'Exam' || c.type === 'Task') {
     const isOverdueRisk = hoursLeft < effortHours;
     const isTight = hoursLeft < effortHours * 2.5;
-    
+
     let suggestedStartText = c.suggestedStartTime || '';
     if (!suggestedStartText) {
-      // Suggesting standard quiet study times (typically after 7 PM as in prompt)
       const suggestedDate = new Date(dueDateTime.getTime() - (effortMin * 1.5 * 60 * 1000));
       suggestedStartText = suggestedDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) + `, 7:30 PM`;
     }
@@ -99,8 +101,8 @@ const getCommitmentHealth = (c: Commitment) => {
     let statusText = 'Ready ✅';
     let messageText = "You'll finish comfortably before the deadline.";
     if (isOverdueRisk) {
-      statusText = 'Overdue Risk 🚨';
-      messageText = 'Time remaining is less than estimated effort. Start immediately!';
+      statusText = 'Start Immediately ⚠️';
+      messageText = 'Remaining time is close to estimated effort. Start as soon as possible.';
     } else if (isTight) {
       statusText = 'Attention Required ⚠️';
       messageText = 'We should schedule a focus session today to stay comfortable.';
@@ -110,22 +112,22 @@ const getCommitmentHealth = (c: Commitment) => {
       status: statusText,
       message: messageText,
       hoursLeft: hoursLeft,
-      isTight,
-      isOverdue: isOverdueRisk,
+      isTight: isTight || isOverdueRisk,
+      isOverdue: false, // Incomplete and deadline in future: never overdue
       suggestedStart: suggestedStartText
     };
-  } else if (['Meeting', 'Appointment', 'Event', 'Travel'].includes(c.type)) {
+  } else if (['Meeting', 'Appointment', 'Event', 'Travel', 'Class', 'Interview'].includes(c.type)) {
     const totalBufferMin = travelTime + prepTime;
     const hoursLeftToStart = (diffMs - (totalBufferMin * 60 * 1000)) / (1000 * 60 * 60);
 
     let statusText = 'Ready ✅';
     let messageText = "You're all set. Take a deep breath before you begin.";
     const isTight = hoursLeftToStart < 1.5;
-    const isOverdueRisk = hoursLeftToStart < 0;
+    const bufferStarted = hoursLeftToStart < 0;
 
-    if (isOverdueRisk) {
-      statusText = 'Running Late 🚨';
-      messageText = 'Preparation or transit should have already started. Head out!';
+    if (bufferStarted) {
+      statusText = 'Depart / Prep Now ⏰';
+      messageText = 'Preparation or transit window has begun. Head out or get ready!';
     } else if (isTight) {
       statusText = 'Time to Prep ⏰';
       messageText = `Starts soon. Start preparation block in ${Math.round(hoursLeftToStart * 60)} mins.`;
@@ -141,8 +143,8 @@ const getCommitmentHealth = (c: Commitment) => {
       status: statusText,
       message: messageText,
       hoursLeft: hoursLeft,
-      isTight,
-      isOverdue: isOverdueRisk,
+      isTight: isTight || bufferStarted,
+      isOverdue: false, // Incomplete and deadline in future: never overdue
       leaveTime: leaveTimeStr,
       prepStartTime: prepTimeStr
     };
@@ -166,22 +168,52 @@ const getCommitmentHealth = (c: Commitment) => {
       message: messageText,
       hoursLeft: hoursLeft,
       isTight,
-      isOverdue: isTight
+      isOverdue: false // Incomplete and deadline in future: never overdue
     };
   }
 };
 
 export const CommitmentsFeed: React.FC = () => {
-  const { state, addCommitment, toggleCommitment, deleteCommitment } = usePulse();
+  const { state, addCommitment, toggleCommitment, deleteCommitment, getMemeReaction } = usePulse();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<string>('All');
   const [showAddForm, setShowAddForm] = useState(false);
   const [expandedCommitment, setExpandedCommitment] = useState<string | null>(null);
+  const [completionToast, setCompletionToast] = useState<{ badgeText: string; reactionText: string } | null>(null);
+
+  // Dynamic live clock for updating overdue badges without requiring page refresh
+  const [currentTime, setCurrentTime] = useState<Date>(() => new Date());
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 30000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const handleToggleCommitment = (c: Commitment) => {
+    const willBeCompleted = !c.completed;
+    toggleCommitment(c.id);
+
+    if (willBeCompleted && state.memePersonalityMode !== 'off') {
+      const reaction = getMemeReaction({
+        type: 'task_completed',
+        taskTitle: c.title,
+        sourceScreen: 'commitments',
+      });
+      setCompletionToast({
+        badgeText: reaction.badgeText,
+        reactionText: reaction.reactionText,
+      });
+      setTimeout(() => {
+        setCompletionToast(null);
+      }, 5000);
+    }
+  };
 
   // New Commitment Form State
   const [newTitle, setNewTitle] = useState('');
   const [newType, setNewType] = useState<CommitmentType>('Assignment');
-  const [newDueDate, setNewDueDate] = useState('2026-06-25');
+  const [newDueDate, setNewDueDate] = useState(() => getLocalTodayDateString());
   const [newDueTime, setNewDueTime] = useState('12:00');
   const [newEffort, setNewEffort] = useState('1 hour');
   const [newEffortMin, setNewEffortMin] = useState(60);
@@ -218,40 +250,12 @@ export const CommitmentsFeed: React.FC = () => {
   const [prepTime, setPrepTime] = useState(0);
 
   const typesList = [
-    'All', 'Assignment', 'Meeting', 'Bill', 'Appointment', 'Event', 'Travel', 'Other'
+    'All', 'Assignment', 'Exam', 'Class', 'Interview', 'Meeting', 'Bill', 'Task', 'Personal', 'Appointment', 'Event', 'Travel'
   ];
 
   // Helper calculation for display times remaining
-  const getTimeRemainingText = (dueDateStr: string, dueTimeStr?: string): string => {
-    const today = TODAY_CONTEXT;
-    const dueParts = dueDateStr.split('-');
-    const dueYear = parseInt(dueParts[0], 10);
-    const dueMonth = parseInt(dueParts[1], 10) - 1;
-    const dueDay = parseInt(dueParts[2], 10);
-    
-    let dueTimeHour = 12;
-    let dueTimeMin = 0;
-    if (dueTimeStr) {
-      const timeParts = dueTimeStr.split(':');
-      dueTimeHour = parseInt(timeParts[0], 10);
-      dueTimeMin = parseInt(timeParts[1], 10);
-    }
-    
-    const due = new Date(dueYear, dueMonth, dueDay, dueTimeHour, dueTimeMin);
-    const diffTime = due.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    if (diffTime < 0) {
-      return `Overdue 🚨`;
-    }
-
-    if (diffDays === 0) {
-      return 'Due today ⚠️';
-    }
-    if (diffDays === 1) {
-      return 'Due tomorrow ⏰';
-    }
-    return `In ${diffDays} days`;
+  const getTimeRemainingText = (dueDateStr: string, dueTimeStr?: string, completed?: boolean): string => {
+    return getDeadlineRelativeText(dueDateStr, dueTimeStr, completed, currentTime);
   };
 
   const handleReminderToggle = (field: keyof typeof reminderPrefs) => {
@@ -344,7 +348,7 @@ export const CommitmentsFeed: React.FC = () => {
     // Reset Form to default values
     setNewTitle('');
     setNewType('Assignment');
-    setNewDueDate('2026-06-25');
+    setNewDueDate(getLocalTodayDateString());
     setNewDueTime('12:00');
     setNewEffort('1 hour');
     setNewEffortMin(60);
@@ -384,14 +388,31 @@ export const CommitmentsFeed: React.FC = () => {
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-[#1A1A1B]/40" />
           <input
             type="text"
-            placeholder="Search your Life Inbox..."
+            placeholder="Search your commitments..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-[#EBE9E0] rounded-xl focus:outline-none focus:ring-1 focus:ring-[#7C9070] focus:border-[#7C9070] shadow-sm text-[#1A1A1B]"
           />
         </div>
 
-        <div className="flex gap-2 w-full sm:w-auto">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          {filteredCommitments.length > 0 && (
+            <button
+              onClick={() => {
+                const filename = selectedType !== 'All' 
+                  ? `pulse-${selectedType.toLowerCase()}-commitments.ics`
+                  : 'pulse-commitments.ics';
+                downloadICSFile(filteredCommitments, filename);
+              }}
+              title="Export filtered commitments to .ics for Google Calendar or external apps"
+              className="flex items-center gap-1.5 bg-white hover:bg-[#FAF9F6] text-[#1A1A1B]/70 border border-[#EBE9E0] font-semibold px-3.5 py-2 text-sm rounded-xl transition-colors shadow-xs cursor-pointer"
+            >
+              <Download className="w-4 h-4 text-[#7C9070]" />
+              <span className="hidden md:inline">Export .ics</span>
+              <span className="md:hidden">Sync</span>
+            </button>
+          )}
+
           <button
             onClick={() => setShowAddForm(!showAddForm)}
             className="flex items-center gap-1.5 bg-[#7C9070] hover:bg-[#6c7d61] text-white font-semibold px-4 py-2 text-sm rounded-xl transition-colors shadow-sm ml-auto sm:ml-0 cursor-pointer"
@@ -776,6 +797,27 @@ export const CommitmentsFeed: React.FC = () => {
         </form>
       )}
 
+      {/* Contextual Text Reaction Banner from MemeManager (Zero Images) */}
+      {completionToast && (
+        <div className="bg-[#FAF9F6] border border-[#7C9070]/30 rounded-2xl p-3.5 flex items-center justify-between gap-3 text-xs shadow-sm">
+          <div className="flex items-center gap-2.5">
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#7C9070]/15 text-[#7C9070] border border-[#7C9070]/20 shrink-0">
+              {completionToast.badgeText}
+            </span>
+            <span className="text-[#1A1A1B]/80 font-medium leading-relaxed">
+              {completionToast.reactionText}
+            </span>
+          </div>
+          <button 
+            type="button"
+            onClick={() => setCompletionToast(null)}
+            className="text-[#1A1A1B]/40 hover:text-[#1A1A1B] text-xs font-bold px-2 py-0.5 rounded-lg cursor-pointer shrink-0"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Commitments List Feed */}
       <div className="space-y-3.5">
         {filteredCommitments.length === 0 ? (
@@ -783,13 +825,13 @@ export const CommitmentsFeed: React.FC = () => {
             <EmptyStateIllustration type="feed" />
             <p className="text-[#1A1A1B]/60 text-sm mt-4 font-serif italic font-semibold">No commitments found</p>
             <p className="text-xs text-[#1A1A1B]/40 max-w-xs text-center mt-1">
-              Try searching another category, adding a manual commitment, or uploading a document in the Life Inbox to extract one!
+              Try searching another category or click &ldquo;Add Commitment&rdquo; above to record a new task!
             </p>
           </div>
         ) : (
           filteredCommitments.map(c => {
             const isExpanded = expandedCommitment === c.id;
-            const health = getCommitmentHealth(c);
+            const health = getCommitmentHealth(c, currentTime);
             
             return (
               <div 
@@ -806,7 +848,7 @@ export const CommitmentsFeed: React.FC = () => {
                 <div className="p-4 flex items-start gap-4">
                   {/* Checklist Ring */}
                   <button
-                    onClick={() => toggleCommitment(c.id)}
+                    onClick={() => handleToggleCommitment(c)}
                     className="mt-1 rounded-full text-[#1A1A1B]/20 hover:text-[#7C9070] transition-colors cursor-pointer flex-shrink-0"
                     title={c.completed ? "Mark incomplete" : "Mark complete"}
                   >
@@ -870,19 +912,17 @@ export const CommitmentsFeed: React.FC = () => {
 
                     {/* Meta info bar */}
                     <div className="flex flex-wrap gap-4 mt-2 text-xs text-[#1A1A1B]/50">
-                      <span className="flex items-center gap-1.5 font-semibold">
-                        <Calendar className="w-3.5 h-3.5 text-[#1A1A1B]/30" />
-                        <span>{getTimeRemainingText(c.dueDate, c.dueTime)}</span>
+                      <span className={`flex items-center gap-1.5 font-semibold ${
+                        !c.completed && health.isOverdue ? 'text-rose-600' : ''
+                      }`}>
+                        <Calendar className={`w-3.5 h-3.5 ${!c.completed && health.isOverdue ? 'text-rose-500' : 'text-[#1A1A1B]/30'}`} />
+                        <span>{getDeadlineRelativeText(c.dueDate, c.dueTime, c.completed, currentTime)}</span>
                       </span>
-                      {c.dueTime && (
-                        <>
-                          <span>•</span>
-                          <span className="flex items-center gap-1">
-                            <Clock className="w-3.5 h-3.5 text-[#1A1A1B]/30" />
-                            <span>Ends at {c.dueTime}</span>
-                          </span>
-                        </>
-                      )}
+                      <span>•</span>
+                      <span className="flex items-center gap-1 font-medium">
+                        <Clock className="w-3.5 h-3.5 text-[#1A1A1B]/30" />
+                        <span>Due: {formatDeadlineDisplay(c.dueDate, c.dueTime, currentTime)}</span>
+                      </span>
                       <span>•</span>
                       <span>Effort: <strong className="text-[#1A1A1B]/70">{c.estimatedEffort}</strong></span>
                       {c.repeat && c.repeat !== 'none' && (
@@ -925,7 +965,11 @@ export const CommitmentsFeed: React.FC = () => {
                           <span>Commitment Health & Action Plan</span>
                         </span>
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wider ${
-                          health.isOverdue ? 'bg-rose-50 text-rose-600 border-rose-100' : 'bg-[#7C9070]/10 text-[#7C9070] border-[#7C9070]/10'
+                          health.isOverdue 
+                            ? 'bg-rose-50 text-rose-600 border-rose-100' 
+                            : health.isTight
+                              ? 'bg-amber-50 text-amber-600 border-amber-100'
+                              : 'bg-[#7C9070]/10 text-[#7C9070] border-[#7C9070]/10'
                         }`}>
                           {health.status}
                         </span>

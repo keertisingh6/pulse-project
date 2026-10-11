@@ -80,7 +80,7 @@ export const InsightsView: React.FC = () => {
           
           <div className="space-y-3.5 text-xs md:text-sm text-slate-600 font-medium">
             <p className="leading-relaxed">
-              "Keerti, take a moment to look back. You've cleared <strong className="text-slate-800">{completedCount} major commitments</strong> this cycle. Your largest concentration block was spent on assignments, reducing overall pressure."
+              "{state.user?.name ? `${state.user.name}, take` : 'Take'} a moment to look back. You've cleared <strong className="text-slate-800">{completedCount} major commitments</strong> this cycle. Your largest concentration block was spent on assignments, reducing overall pressure."
             </p>
             <p className="leading-relaxed">
               {completedBills > 0 ? (

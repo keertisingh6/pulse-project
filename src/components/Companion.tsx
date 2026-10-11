@@ -1,17 +1,16 @@
 import React, { useState } from 'react';
 import { usePulse } from '../context/PulseContext';
 import { KairoCompanion } from './Illustrations';
-import { Sparkles, Edit2, Check } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { Sparkles, Edit2, Check, Smile, MessageSquareQuote } from 'lucide-react';
+import { getContextualCompanionMemeNote } from '../utils/memeEngine';
 
 export const Companion: React.FC = () => {
-  const { state, updateUserName } = usePulse();
+  const { state, updateUserName, setMemePersonalityMode } = usePulse();
   const [isEditing, setIsEditing] = useState(false);
   const [tempName, setTempName] = useState(state.userName);
   const [expression, setExpression] = useState<'calm' | 'happy' | 'thinking'>('calm');
 
   const pendingCount = state.commitments.filter(c => !c.completed).length;
-  const urgentCount = state.commitments.filter(c => !c.completed && c.priority === 'high').length;
 
   const handleSaveName = () => {
     if (tempName.trim()) {
@@ -34,30 +33,29 @@ export const Companion: React.FC = () => {
     return `${timeGreeting}, ${displayName} 👋`;
   };
 
-  const getCompanionMessage = () => {
-    if (pendingCount === 0) {
-      return "All quiet! You have zero active commitments. Enjoy this spaciousness, breathe deeply, or check out some books.";
-    }
-
-    if (urgentCount > 0) {
-      return `You have ${pendingCount} commitments on your list. ${urgentCount} need urgent attention today. Let's tackle them mindfully.`;
-    }
-
-    return `You have ${pendingCount} active commitments. None of them are pressing right now. This is a great time to do some calm, steady work.`;
-  };
+  const currentMode = state.memePersonalityMode || 'college_friend';
+  const companionNote = getContextualCompanionMemeNote(state, currentMode);
 
   return (
     <div className="bg-white rounded-[2rem] p-8 border border-[#EBE9E0] shadow-sm relative overflow-hidden" id="companion-panel">
-      {/* Absolute top right streak indicator */}
-      <div className="absolute top-6 right-6 flex items-center gap-1.5 bg-[#7C9070]/10 text-[#7C9070] px-3.5 py-1.5 rounded-full text-xs font-semibold">
-        <Sparkles className="w-3.5 h-3.5" />
-        <span>{state.streakDays} Day Streak</span>
+      {/* Absolute top right badges */}
+      <div className="absolute top-6 right-6 flex items-center gap-2">
+        {companionNote.memeTitle && (
+          <span className="hidden sm:inline-flex items-center gap-1 bg-amber-500/10 text-amber-700 border border-amber-500/20 px-3 py-1 rounded-full text-xs font-semibold">
+            <MessageSquareQuote className="w-3.5 h-3.5" />
+            <span>{companionNote.memeTitle}</span>
+          </span>
+        )}
+        <div className="flex items-center gap-1.5 bg-[#7C9070]/10 text-[#7C9070] px-3.5 py-1.5 rounded-full text-xs font-semibold">
+          <Sparkles className="w-3.5 h-3.5" />
+          <span>{state.streakDays} Day Streak</span>
+        </div>
       </div>
 
       <div className="flex flex-col sm:flex-row items-center gap-6 relative z-10">
         {/* Animated Cute Kairo Character */}
         <div 
-          className="cursor-pointer bg-[#F5F1E9] rounded-full p-4 border border-[#EBE9E0]/40"
+          className="cursor-pointer bg-[#F5F1E9] rounded-full p-4 border border-[#EBE9E0]/40 transition-transform hover:scale-105"
           onClick={() => {
             setExpression(prev => prev === 'calm' ? 'happy' : prev === 'happy' ? 'thinking' : 'calm');
           }}
@@ -105,17 +103,17 @@ export const Companion: React.FC = () => {
             )}
           </div>
 
-          <p className="text-[#1A1A1B]/70 text-sm md:text-base leading-relaxed max-w-xl italic font-serif">
-            "{getCompanionMessage()}"
+          <p className="text-[#1A1A1B]/75 text-sm md:text-base leading-relaxed max-w-xl italic font-serif">
+            "{companionNote.message}"
           </p>
 
-          {/* Prompt tips */}
-          <div className="mt-4 flex flex-wrap gap-2 justify-center sm:justify-start">
-            <span className="text-[11px] bg-[#FAF9F6] text-[#1A1A1B]/60 border border-[#EBE9E0] px-3 py-1 rounded-full font-medium">
-              💡 "Everything can wait if you need to breathe."
+          {/* Prompt tips & Personality Indicator */}
+          <div className="mt-4 flex flex-wrap gap-2 justify-center sm:justify-start items-center">
+            <span className="text-[11px] bg-[#FAF9F6] text-[#7C9070] border border-[#7C9070]/20 px-3 py-1 rounded-full font-bold">
+              {companionNote.badge}
             </span>
             <span className="text-[11px] bg-[#FAF9F6] text-[#1A1A1B]/60 border border-[#EBE9E0] px-3 py-1 rounded-full font-medium">
-              ✨ Pulse Philosophy: Mindful focus &gt; Busywork
+              💡 {pendingCount === 0 ? "Everything can wait if you need to breathe." : "Mindful progress beats last-minute cramming."}
             </span>
           </div>
         </div>

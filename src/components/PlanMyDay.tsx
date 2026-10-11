@@ -52,7 +52,7 @@ export const PlanMyDay: React.FC = () => {
         <div className="space-y-1">
           <span className="text-xs font-semibold text-[#7C9070] block font-serif">Kairo's Dynamic Day Plan</span>
           <p className="text-[#1A1A1B]/70 text-sm md:text-base leading-relaxed italic font-serif">
-            "{planItems ? advice : `You have ${activeCommitments.length} pending commitments in your Life Inbox. I can curate a balanced hourly plan for today consisting of focus sprints, tea breaks, and payment cycles. Let me arrange it.`}"
+            "{planItems ? advice : `You have ${activeCommitments.length} pending commitments in your workspace. I can curate a balanced hourly plan for today consisting of focus sprints, tea breaks, and study cycles. Let me arrange it.`}"
           </p>
         </div>
       </div>
@@ -79,7 +79,7 @@ export const PlanMyDay: React.FC = () => {
           </button>
           {activeCommitments.length === 0 && (
             <p className="text-[10px] text-rose-500 mt-2 font-medium">
-              ⚠️ Add some commitments in the Life Inbox first!
+              ⚠️ Add some commitments in the database first!
             </p>
           )}
         </div>

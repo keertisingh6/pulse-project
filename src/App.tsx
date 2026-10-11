@@ -1,43 +1,54 @@
 import React, { useState } from 'react';
 import { PulseProvider, usePulse } from './context/PulseContext';
 import { LoginPage } from './components/LoginPage';
-import { Companion } from './components/Companion';
-import { CommitmentsFeed } from './components/CommitmentsFeed';
-import { LifeInbox } from './components/LifeInbox';
-import { PlanMyDay } from './components/PlanMyDay';
-import { FocusTimer } from './components/FocusTimer';
+import { PersonalSetup } from './components/PersonalSetup';
+import { FocusMateDashboard } from './components/FocusMateDashboard';
+import { DailyPlannerView } from './components/DailyPlannerView';
+import { AssignmentsDatabaseView } from './components/AssignmentsDatabaseView';
+import { DistractionFreeModeView } from './components/DistractionFreeModeView';
+import { BlockListView } from './components/BlockListView';
 import { CalendarView } from './components/CalendarView';
-import { InsightsView } from './components/InsightsView';
+import { GoalsView } from './components/GoalsView';
+import { AIAssistantView } from './components/AIAssistantView';
+import { SettingsView } from './components/SettingsView';
+import { CommitmentsFeed } from './components/CommitmentsFeed';
 import { 
-  Inbox, Sparkles, Clock, Calendar as CalendarIcon, 
-  BarChart2, RefreshCw, Zap, Heart, Shield, LogOut, ChevronDown
+  LayoutDashboard, Calendar as CalendarIcon, BookOpen, 
+  Shield, Lock, Sparkles, Clock, Settings, 
+  Target, Bot, Zap, LogOut, ChevronDown, Bell, Search, 
+  Maximize2, Plus, CheckCircle2, ChevronRight, Menu, X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
-type TabType = 'inbox' | 'plan' | 'timer' | 'calendar' | 'insights';
+type TabType = 
+  | 'dashboard' 
+  | 'planner' 
+  | 'commitments'
+  | 'database' 
+  | 'zen' 
+  | 'blocklist' 
+  | 'calendar' 
+  | 'goals' 
+  | 'assistant' 
+  | 'settings' 
+  | 'setup';
 
 function PulseApp() {
-  const [activeTab, setActiveTab] = useState<TabType>('inbox');
+  const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const { state, resetAllData, resetAuth, logout } = usePulse();
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const { state, logout } = usePulse();
 
-  // Strict Authentication Guard:
-  // Fresh or unauthenticated sessions ALWAYS display the LoginPage
-  if (!state.isAuthenticated || !state.user) {
+  // App Access Check: allow entering Pulse without requiring authentication
+  if (!state.hasEnteredWorkspace && !state.user && state.commitments.length === 0) {
     return <LoginPage />;
   }
 
-  const handleReset = () => {
-    if (confirm("Reset demo commitments and logs back to fresh states?")) {
-      resetAllData();
-    }
-  };
-
-  const handleResetAuth = () => {
-    if (confirm("Log out and reset authentication back to clean Login Page?")) {
-      resetAuth();
-    }
-  };
+  // Personal Setup Guard for fresh onboardings
+  if (!state.profile?.hasCompletedSetup && activeTab !== 'setup') {
+    return <PersonalSetup onComplete={() => setActiveTab('dashboard')} />;
+  }
 
   const handleLogout = () => {
     setShowUserMenu(false);
@@ -46,213 +57,261 @@ function PulseApp() {
 
   const userInitial = state.user?.name 
     ? state.user.name.charAt(0).toUpperCase() 
-    : (state.userName ? state.userName.charAt(0).toUpperCase() : 'U');
+    : (state.userName ? state.userName.charAt(0).toUpperCase() : 'S');
+
+  const displayName = state.user?.name || state.userName || 'Student';
+
+  const navItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
+    { id: 'planner', label: 'Daily Planner', icon: <Clock className="w-4 h-4" /> },
+    { id: 'commitments', label: 'Commitments', icon: <CheckCircle2 className="w-4 h-4" /> },
+    { id: 'database', label: 'Assignments', icon: <BookOpen className="w-4 h-4" /> },
+    { id: 'zen', label: 'Focus Studio', icon: <Shield className="w-4 h-4" /> },
+    { id: 'blocklist', label: 'Block List', icon: <Lock className="w-4 h-4" /> },
+    { id: 'calendar', label: 'Calendar', icon: <CalendarIcon className="w-4 h-4" /> },
+    { id: 'goals', label: 'Goals', icon: <Target className="w-4 h-4" /> },
+    { id: 'assistant', label: 'AI Study Buddy', icon: <Bot className="w-4 h-4" /> },
+    { id: 'settings', label: 'Settings', icon: <Settings className="w-4 h-4" /> },
+  ];
 
   return (
-    <div className="min-h-screen bg-[#FAF9F6] text-[#1A1A1B] flex flex-col selection:bg-[#7C9070]/20">
+    <div className="min-h-screen bg-gradient-to-br from-[#E6D4D1] via-[#F2E5DC] to-[#E9DCD3] p-2 sm:p-4 md:p-6 lg:p-8 flex items-center justify-center font-sans selection:bg-[#7C9070]/20">
       
-      {/* Premium Top Navigation Bar */}
-      <header className="border-b border-[#EBE9E0] bg-white/70 backdrop-blur-md sticky top-0 z-40">
-        <div className="max-w-5xl mx-auto px-4 py-3.5 flex items-center justify-between">
-          
-          {/* Logo */}
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-[#7C9070] flex items-center justify-center text-white shadow-md shadow-[#7C9070]/10 relative overflow-hidden">
-              <span className="font-display font-black text-sm select-none">P</span>
-              {/* Pulsing ring */}
-              <span className="absolute inset-0 border border-white rounded-full scale-75 animate-ping opacity-30" />
-            </div>
-            <div>
-              <h1 className="font-display font-black text-lg tracking-tight leading-none text-[#1A1A1B]">
-                Pulse
-              </h1>
-              <span className="text-[9px] font-mono font-bold text-[#1A1A1B]/40 block tracking-wider uppercase">
-                Life Inbox
-              </span>
-            </div>
-          </div>
-
-          {/* Quick Metrics Bar & Profile Controls */}
-          <div className="flex items-center gap-3">
-            {/* Active streak */}
-            <div className="hidden sm:flex items-center gap-1 text-xs font-semibold bg-[#7C9070]/10 text-[#7C9070] px-3 py-1 rounded-full border border-[#7C9070]/20">
-              <Zap className="w-3.5 h-3.5 text-[#7C9070] fill-[#7C9070]/10" />
-              <span>{state.streakDays}d Streak</span>
-            </div>
-
-            {/* Direct visible Log Out button */}
-            <button
-              onClick={handleLogout}
-              title="Log out of your workspace"
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#1A1A1B]/70 hover:text-rose-600 hover:bg-rose-50 border border-[#EBE9E0] hover:border-rose-200 rounded-full transition-all cursor-pointer bg-white"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Log Out</span>
-            </button>
-
-            {/* Profile Avatar & Dropdown */}
-            <div className="relative">
-              <button
-                onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex items-center gap-2 border border-[#EBE9E0] p-1 pr-2.5 rounded-full bg-[#F5F1E9] hover:bg-[#ebe6dc] transition-colors cursor-pointer"
-              >
-                {state.user?.avatar ? (
-                  <img
-                    src={state.user.avatar}
-                    alt={state.user.name}
-                    className="w-6.5 h-6.5 rounded-full object-cover border border-[#EBE9E0]"
-                    referrerPolicy="no-referrer"
-                  />
-                ) : (
-                  <div className="w-6.5 h-6.5 rounded-full bg-[#E5D5C8] border border-[#EBE9E0] flex items-center justify-center text-[10px] font-bold select-none text-[#1A1A1B]/80">
-                    {userInitial}
-                  </div>
-                )}
-                <span className="text-xs font-bold text-[#1A1A1B]/80 max-w-[100px] truncate">
-                  {state.user?.name || state.userName}
-                </span>
-                <ChevronDown className="w-3 h-3 text-[#1A1A1B]/40" />
-              </button>
-
-              {/* User Dropdown Menu */}
-              {showUserMenu && (
-                <div 
-                  className="absolute right-0 mt-2 w-56 bg-white border border-[#EBE9E0] rounded-2xl shadow-lg p-2 z-50 space-y-1"
-                  onMouseLeave={() => setShowUserMenu(false)}
-                >
-                  <div className="p-2 border-b border-[#EBE9E0]">
-                    <p className="text-xs font-bold text-[#1A1A1B] truncate">{state.user?.name || state.userName}</p>
-                    <p className="text-[11px] text-[#1A1A1B]/50 truncate">{state.user?.email || `${state.userName.toLowerCase()}@pulse.app`}</p>
-                    <div className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-semibold text-[#7C9070] bg-[#7C9070]/10 px-2 py-0.5 rounded-full">
-                      <Shield className="w-2.5 h-2.5" />
-                      <span>{state.user?.provider === 'google' ? 'Google Account' : state.user?.provider === 'guest' ? 'Guest Workspace' : 'Email Account'}</span>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={handleLogout}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer text-left"
-                  >
-                    <LogOut className="w-3.5 h-3.5" />
-                    <span>Log Out</span>
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Container Layout */}
-      <main className="flex-1 max-w-5xl w-full mx-auto px-4 py-6 space-y-6">
+      {/* Sleek Tablet Frame matching FocusMate Mockup */}
+      <div className="w-full max-w-[1400px] h-full min-h-[92vh] bg-white rounded-[2.5rem] md:rounded-[3rem] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.15)] border-4 sm:border-8 border-slate-900/90 flex flex-col md:flex-row overflow-hidden relative">
         
-        {/* Calm AI Companion Header Banner */}
-        <Companion />
+        {/* Subtle camera punch hole at top bezel of tablet */}
+        <div className="hidden md:block absolute top-2 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-slate-800 border border-slate-700/60 z-50 pointer-events-none" />
 
-        {/* Dynamic Tab Navigation (Headspace Style Rounded Pills) */}
-        <div className="grid grid-cols-5 p-1 bg-[#F5F1E9] border border-[#EBE9E0] rounded-2xl md:max-w-2xl mx-auto">
-          {[
-            { id: 'inbox', label: 'Life Inbox', icon: <Inbox className="w-4 h-4" /> },
-            { id: 'plan', label: 'Plan Day', icon: <Sparkles className="w-4 h-4" /> },
-            { id: 'timer', label: 'Focus Clock', icon: <Clock className="w-4 h-4" /> },
-            { id: 'calendar', label: 'Calendar', icon: <CalendarIcon className="w-4 h-4" /> },
-            { id: 'insights', label: 'Insights', icon: <BarChart2 className="w-4 h-4" /> },
-          ].map(tab => {
-            const isSelected = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as TabType)}
-                className={`py-2.5 flex flex-col md:flex-row items-center justify-center gap-1.5 rounded-xl transition-all duration-300 cursor-pointer ${
-                  isSelected
-                    ? 'bg-white text-[#7C9070] shadow-sm border border-[#EBE9E0] font-semibold'
-                    : 'text-[#1A1A1B]/60 hover:text-[#7C9070] font-medium'
-                }`}
+        {/* LEFT PERSISTENT SIDEBAR matching FocusMate */}
+        <aside className={`
+          fixed md:relative inset-y-0 left-0 z-50 w-64 bg-[#FCFBF8] border-r border-[#EFECE6] flex flex-col justify-between p-5 transition-transform duration-300 ease-in-out
+          ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+        `}>
+          <div className="space-y-6">
+            
+            {/* Pulse Brand Header */}
+            <div className="flex items-center justify-between">
+              <div 
+                onClick={() => { setActiveTab('dashboard'); setMobileSidebarOpen(false); }}
+                className="flex items-center gap-3 cursor-pointer group"
               >
-                {tab.icon}
-                <span className="text-[10px] md:text-xs font-semibold select-none hidden md:inline">
-                  {tab.label}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Frame Content with Micro-Transitions */}
-        <div className="bg-white/40 rounded-3xl min-h-[400px]">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeTab}
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.25 }}
-              className="focus:outline-none"
-            >
-              {activeTab === 'inbox' && (
-                <div className="space-y-8">
-                  {/* Smart Imports at the top */}
-                  <LifeInbox />
-                  
-                  {/* Commitments Feed directly underneath so extracted goals are seen immediately! */}
-                  <div className="border-t border-[#EBE9E0] pt-6 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-display font-extrabold text-[#1A1A1B] text-lg">
-                        Active Commitments Feed
-                      </h3>
-                      <span className="text-xs font-semibold text-[#1A1A1B]/40">
-                        {state.commitments.filter(c => !c.completed).length} items remaining
-                      </span>
-                    </div>
-                    <CommitmentsFeed />
+                <div className="w-9 h-9 rounded-2xl bg-[#5E7353] flex items-center justify-center text-white shadow-md shadow-[#5E7353]/30 font-extrabold text-base relative overflow-hidden">
+                  <span>P</span>
+                  <span className="absolute bottom-0.5 right-0.5 w-2 h-2 bg-emerald-300 rounded-full border border-[#5E7353] animate-pulse" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-extrabold text-base tracking-tight text-[#1E2B21]">Pulse</span>
+                    <span className="text-[10px] font-mono font-bold bg-[#5E7353]/15 text-[#5E7353] px-1.5 py-0.5 rounded">OS</span>
                   </div>
+                  <span className="text-[10px] font-mono text-[#5E7353] font-bold block leading-none">
+                    Academic Focus
+                  </span>
+                </div>
+              </div>
+
+              {/* Close button on mobile */}
+              <button 
+                onClick={() => setMobileSidebarOpen(false)}
+                className="md:hidden p-1 text-slate-400 hover:text-slate-600 rounded-lg cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Quick Action: Add Commitment */}
+            <button
+              onClick={() => { setActiveTab('commitments'); setMobileSidebarOpen(false); }}
+              className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-[#5E7353] hover:bg-[#506346] text-white rounded-2xl font-bold text-xs shadow-sm shadow-[#5E7353]/20 transition-all cursor-pointer hover:scale-[1.02]"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Commitment</span>
+            </button>
+
+            {/* Sidebar Navigation */}
+            <nav className="space-y-1">
+              {navItems.map(item => {
+                const isSelected = activeTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      setActiveTab(item.id as TabType);
+                      setMobileSidebarOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer ${
+                      isSelected
+                        ? 'bg-[#E7EFE6] text-[#405437] shadow-2xs font-extrabold'
+                        : 'text-[#485346] hover:bg-[#F4F2EC] hover:text-[#212C1E]'
+                    }`}
+                  >
+                    <span className={isSelected ? 'text-[#5E7353]' : 'text-slate-400'}>
+                      {item.icon}
+                    </span>
+                    <span className="truncate">{item.label}</span>
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
+
+          {/* Bottom user card in sidebar */}
+          <div className="pt-4 border-t border-[#EFECE6] space-y-2">
+            <div className="flex items-center gap-2.5 p-2 bg-[#F6F4EE] rounded-2xl">
+              {state.user?.avatar ? (
+                <img
+                  src={state.user.avatar}
+                  alt={displayName}
+                  className="w-8 h-8 rounded-full object-cover border border-[#E0DCCE]"
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-[#E5D5C8] border border-[#D5C5B8] flex items-center justify-center text-xs font-bold text-[#1A1A1B]">
+                  {userInitial}
                 </div>
               )}
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-extrabold text-[#1E2B21] truncate">{displayName}</p>
+                <p className="text-[10px] text-[#5E7353] font-mono truncate">{state.streakDays}d focus streak</p>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg cursor-pointer transition-colors"
+                title="Log Out"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </aside>
 
-              {activeTab === 'plan' && <PlanMyDay />}
+        {/* Mobile backdrop */}
+        {mobileSidebarOpen && (
+          <div 
+            onClick={() => setMobileSidebarOpen(false)}
+            className="md:hidden fixed inset-0 bg-black/40 z-40 backdrop-blur-xs"
+          />
+        )}
 
-              {activeTab === 'timer' && <FocusTimer />}
+        {/* RIGHT MAIN APP CANVAS */}
+        <div className="flex-1 flex flex-col min-w-0 bg-[#FAF9F5] overflow-y-auto">
+          
+          {/* Top Header inside Canvas */}
+          <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-[#EBE8E0] px-6 py-3.5 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setMobileSidebarOpen(true)}
+                className="md:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
+              >
+                <Menu className="w-5 h-5" />
+              </button>
 
-              {activeTab === 'calendar' && <CalendarView />}
+              {/* Pulse Breadcrumb Indicator */}
+              <div className="hidden lg:flex items-center gap-2 text-xs font-semibold text-slate-400">
+                <span className="text-[#5E7353] font-extrabold font-mono uppercase tracking-wider flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-[#5E7353] animate-pulse" />
+                  Pulse
+                </span>
+                <span>/</span>
+                <span className="text-slate-700 capitalize font-medium">
+                  {navItems.find(n => n.id === activeTab)?.label || 'Dashboard'}
+                </span>
+              </div>
 
-              {activeTab === 'insights' && <InsightsView />}
-            </motion.div>
-          </AnimatePresence>
-        </div>
-      </main>
+              {/* Universal Search */}
+              <div className="relative w-48 sm:w-60 md:w-72">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Search coursework, tasks, syllabus..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-3 py-1.5 bg-[#FAF9F5] border border-[#E8E4DA] rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[#7C9070]"
+                />
+              </div>
+            </div>
 
-      {/* Aesthetic Footer with Demo resetting utility */}
-      <footer className="border-t border-[#EBE9E0] bg-white/50 py-8 text-center space-y-4 mt-auto">
-        <div className="max-w-5xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between text-[#1A1A1B]/40 text-xs font-medium gap-4">
-          <div className="flex items-center gap-2">
-            <Heart className="w-3.5 h-3.5 text-[#7C9070] fill-[#7C9070]/10" />
-            <span>Pulse: Next-Generation Life Inbox.</span>
+            {/* Quick status & streak */}
+            <div className="flex items-center gap-3">
+              <div className="hidden sm:flex items-center gap-1.5 text-xs font-bold text-[#5E7353] bg-[#E7EFE6] px-3 py-1.5 rounded-full">
+                <Zap className="w-3.5 h-3.5 fill-current" />
+                <span>{state.streakDays} Day Streak</span>
+              </div>
+
+              <button
+                onClick={() => setActiveTab('zen')}
+                className="px-3 py-1.5 rounded-full bg-slate-900 text-white hover:bg-slate-800 text-xs font-bold flex items-center gap-1.5 shadow-xs cursor-pointer"
+              >
+                <Shield className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="hidden sm:inline">Zen Shield</span>
+              </button>
+            </div>
+          </header>
+
+          {/* Tab Content Display */}
+          <div className="p-4 sm:p-6 md:p-8 flex-1">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTab}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.18 }}
+              >
+                {activeTab === 'dashboard' && (
+                  <FocusMateDashboard onNavigateToTab={(t) => setActiveTab(t)} />
+                )}
+
+                {activeTab === 'planner' && (
+                  <DailyPlannerView />
+                )}
+
+                {activeTab === 'database' && (
+                  <AssignmentsDatabaseView />
+                )}
+
+                {activeTab === 'zen' && (
+                  <DistractionFreeModeView onExit={() => setActiveTab('dashboard')} />
+                )}
+
+                {activeTab === 'blocklist' && (
+                  <BlockListView />
+                )}
+
+                {(activeTab === 'commitments' || (activeTab as string) === 'inbox') && (
+                  <CommitmentsFeed />
+                )}
+
+                {activeTab === 'calendar' && (
+                  <CalendarView />
+                )}
+
+                {activeTab === 'goals' && (
+                  <GoalsView onAddCommitmentForGoal={() => setActiveTab('commitments')} />
+                )}
+
+                {activeTab === 'assistant' && (
+                  <AIAssistantView 
+                    onNavigateToTab={(t) => setActiveTab(t as any)} 
+                    onStartFocusTimer={() => setActiveTab('zen')}
+                  />
+                )}
+
+                {activeTab === 'settings' && (
+                  <SettingsView />
+                )}
+
+                {activeTab === 'setup' && (
+                  <PersonalSetup onComplete={() => setActiveTab('dashboard')} />
+                )}
+              </motion.div>
+            </AnimatePresence>
           </div>
 
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handleResetAuth}
-              className="flex items-center gap-1.5 hover:text-rose-600 hover:border-rose-200 bg-[#FAF9F6] border border-[#EBE9E0] px-3 py-1.5 rounded-xl cursor-pointer transition-colors text-xs"
-              title="Completely reset auth and return to login page"
-            >
-              <LogOut className="w-3 h-3" />
-              <span>Reset Auth (Log Out)</span>
-            </button>
-            <button
-              onClick={handleReset}
-              className="flex items-center gap-1.5 hover:text-[#7C9070] bg-[#FAF9F6] border border-[#EBE9E0] px-3 py-1.5 rounded-xl cursor-pointer transition-colors text-xs"
-              title="Reset presets and mock data"
-            >
-              <RefreshCw className="w-3 h-3" />
-              <span>Reset Demo Data</span>
-            </button>
-            <span className="hidden sm:inline">•</span>
-            <span className="hidden sm:flex items-center gap-1 font-mono text-[10px]">
-              <Shield className="w-3.5 h-3.5 text-[#1A1A1B]/40" /> Secure Server-side extraction active
-            </span>
-          </div>
         </div>
-      </footer>
+
+      </div>
+
     </div>
   );
 }
@@ -264,3 +323,4 @@ export default function App() {
     </PulseProvider>
   );
 }
+
