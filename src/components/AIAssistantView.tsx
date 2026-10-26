@@ -20,7 +20,7 @@ const createWelcomeMessage = (displayName: string, activeCount: number): Assista
     : `Hello ${displayName}! I’m Kairo, your study companion. I can help you plan around your ${activeCount} active commitments. What would you like to work on?`,
   timestamp: new Date().toISOString(),
   suggestedActions: [
-    { label: "What should I work on today?", actionType: 'navigate', payload: 'today' },
+    { label: "What should I work on today?", actionType: 'navigate', payload: 'planner' },
     { label: "Check upcoming deadlines", actionType: 'filter', payload: 'deadlines' },
   ],
 });
@@ -32,7 +32,7 @@ const renderInlineMarkdown = (text: string) => text.split(/(\*\*[^*]+\*\*)/g).ma
 );
 
 interface AIAssistantViewProps {
-  onNavigateToTab: (tab: 'today' | 'calendar' | 'goals' | 'commitments' | 'database') => void;
+  onNavigateToTab: (tab: 'planner' | 'calendar' | 'goals' | 'commitments' | 'database') => void;
   onStartFocusTimer?: (minutes: number) => void;
 }
 
@@ -121,7 +121,10 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({
 
   const handleActionClick = (action: { label: string; actionType: string; payload?: any }) => {
     if (action.actionType === 'navigate' && action.payload) {
-      onNavigateToTab(action.payload);
+      const target = action.payload === 'today' ? 'planner' : action.payload;
+      if (['planner', 'calendar', 'goals', 'commitments', 'database'].includes(target)) {
+        onNavigateToTab(target);
+      }
     } else if (action.actionType === 'add_focus' && onStartFocusTimer) {
       onStartFocusTimer(action.payload || 25);
     } else if (action.actionType === 'filter') {
