@@ -136,7 +136,11 @@ export const GoalsView: React.FC<{ onAddCommitmentForGoal?: (goalTitle: string) 
                   <div
                     key={goal.id}
                     onClick={() => setSelectedGoalId(goal.id)}
-                    className={`bg-white border rounded-2xl p-4 transition-all cursor-pointer relative overflow-hidden ${
+                    onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setSelectedGoalId(goal.id); } }}
+                    role="button"
+                    aria-pressed={isSelected}
+                    tabIndex={0}
+                    className={`goal-selector-card bg-white border rounded-2xl p-4 transition-all cursor-pointer relative overflow-hidden ${
                       isSelected
                         ? 'border-[#7C9070] shadow-sm ring-1 ring-[#7C9070]/30'
                         : 'border-[#EBE9E0] hover:border-[#7C9070]/40'
@@ -162,14 +166,14 @@ export const GoalsView: React.FC<{ onAddCommitmentForGoal?: (goalTitle: string) 
                         </div>
                       </div>
 
-                      <span className="text-[11px] font-mono font-bold text-[#1A1A1B]/60">
-                        {goal.progressPercentage}%
+                      <span className="goal-progress-ring" style={{ '--goal-progress': `${goal.progressPercentage}%` } as React.CSSProperties} aria-label={`${goal.progressPercentage}% complete`}>
+                        <b>{goal.progressPercentage}%</b>
                       </span>
                     </div>
 
                     {/* Micro Progress Bar */}
                     <div className="mt-3 pt-2 border-t border-[#EBE9E0]/60 flex items-center justify-between text-[10px] text-[#1A1A1B]/50 font-medium">
-                      <span>{completedCount} of {goal.milestones.length} milestones</span>
+                      <span>{completedCount}/{goal.milestones.length} milestones</span>
                       <span>{goal.weeklyHoursTarget || 10}h / week</span>
                     </div>
                   </div>
@@ -477,3 +481,4 @@ export const GoalsView: React.FC<{ onAddCommitmentForGoal?: (goalTitle: string) 
     </div>
   );
 };
+
