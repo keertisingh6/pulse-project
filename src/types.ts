@@ -5,6 +5,8 @@
 export type CommitmentType =
   | 'Assignment'
   | 'Exam'
+  | 'Lab'
+  | 'Hackathon'
   | 'Class'
   | 'Meeting'
   | 'Bill'
