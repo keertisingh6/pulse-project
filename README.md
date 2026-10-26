@@ -25,11 +25,10 @@ Pulse acts as a personal operating system for student life. It helps users organ
 ## 🛠️ Tech Stack
 
 - **Frontend:** React.js, Vite
+- **Backend & Database:** Node.js, Express, Firebase Firestore
 - **Styling:** Tailwind CSS
 - **AI Integration:** Google Gemini API
-- **Development Tools:** JavaScript, npm, Git, and GitHub
-
-*Note: Update this section if your current implementation uses additional technologies or a different AI integration.*
+- **Languages & Tools:** TypeScript, npm, Git, and GitHub
 
 ## 🏗️ Project Architecture
 
@@ -69,7 +68,17 @@ Pulse is designed around the following core modules:
    npm install
    ```
 
-4. Configure the required environment variables for AI integration, if applicable.
+4. Configure environment variables:
+
+   ```bash
+   cp .env.example .env
+   ```
+
+   Add your Gemini API key in `.env`:
+
+   ```env
+   GEMINI_API_KEY=your_gemini_api_key_here
+   ```
 
 5. Start the development server:
 
@@ -81,7 +90,11 @@ Pulse is designed around the following core modules:
 
 ## 🔐 Environment Variables
 
-If the project uses an AI API key, store it in a local environment file such as `.env` and access it through the appropriate configuration.
+Create a `.env` file in the root directory (based on `.env.example`):
+
+| Variable | Description |
+|---|---|
+| `GEMINI_API_KEY` | Google Gemini API key used for Kairo AI assistant features |
 
 **Important:** Never commit API keys, passwords, or other secrets to GitHub.
 
