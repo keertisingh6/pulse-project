@@ -51,16 +51,15 @@ const getCategoryStyle = (type: ScheduleBlock['type']) => {
   }
 };
 
-export const DailyPlannerView: React.FC = () => {
+export const DailyPlannerView: React.FC<{ initialDate?: string }> = ({ initialDate }) => {
   const { state } = usePulse();
 
   // Current selected calendar date in YYYY-MM-DD
-  const [selectedDate, setSelectedDate] = useState<string>(() => formatDateToLocalISO(new Date()));
+  const [selectedDate, setSelectedDate] = useState<string>(() => initialDate || formatDateToLocalISO(new Date()));
 
   // Schedule blocks stored date-specifically; NO default or hardcoded tasks on load
   const [blocks, setBlocks] = useState<ScheduleBlock[]>(() => {
     try {
-      localStorage.removeItem('pulse_time_blocks'); // purge legacy un-dated mock data
       const saved = localStorage.getItem('pulse_schedule_blocks');
       if (saved) {
         const parsed: ScheduleBlock[] = JSON.parse(saved);
@@ -83,6 +82,7 @@ export const DailyPlannerView: React.FC = () => {
   const [modalCommitmentId, setModalCommitmentId] = useState<string | undefined>(undefined);
   const [formError, setFormError] = useState<string | null>(null);
   const [overlapWarning, setOverlapWarning] = useState<string | null>(null);
+  const [autoScheduleNotice, setAutoScheduleNotice] = useState<string | null>(null);
 
   const saveBlocks = (updated: ScheduleBlock[]) => {
     setBlocks(updated);
@@ -95,6 +95,10 @@ export const DailyPlannerView: React.FC = () => {
       setModalDate(selectedDate);
     }
   }, [selectedDate, showAddBlockModal]);
+
+  useEffect(() => {
+    if (initialDate) setSelectedDate(initialDate);
+  }, [initialDate]);
 
   // Date navigation handlers
   const handlePreviousDay = () => {
@@ -121,6 +125,16 @@ export const DailyPlannerView: React.FC = () => {
     weekday: 'long',
     month: 'short',
     day: 'numeric',
+  });
+  const weekStart = new Date(selectedDateObj);
+  weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
+  const weekDays = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(weekStart);
+    date.setDate(weekStart.getDate() + index);
+    const key = formatDateToLocalISO(date);
+    const dayBlocks = blocks.filter(block => block.date === key);
+    const dueItems = state.commitments.filter(item => !item.completed && item.dueDate === key);
+    return { key, day: date.toLocaleDateString('en-US', { weekday: 'short' }), number: date.getDate(), dayBlocks, dueItems, today: key === formatDateToLocalISO(new Date()) };
   });
 
   // Filter tasks strictly for the selected date
@@ -187,6 +201,46 @@ export const DailyPlannerView: React.FC = () => {
     setFormError(null);
     setOverlapWarning(null);
     setShowAddBlockModal(true);
+  };
+
+  const handleAutoSchedulePending = () => {
+    const pending = unscheduledCommitments.slice(0, 5);
+    if (!pending.length) {
+      setAutoScheduleNotice('Everything is already scheduled. You can add another block whenever you need one.');
+      return;
+    }
+    const additions: ScheduleBlock[] = [];
+    let cursor = 9 * 60;
+    for (const commitment of pending) {
+      const duration = Math.min(120, Math.max(25, commitment.effortMinutes || 45));
+      let start = cursor;
+      let end = start + duration;
+      let conflict = blocks.find(block => block.date === selectedDate && start < (Number(block.endTime.slice(0, 2)) * 60 + Number(block.endTime.slice(3, 5))) && end > (Number(block.startTime.slice(0, 2)) * 60 + Number(block.startTime.slice(3, 5))));
+      while (conflict && end <= 21 * 60) {
+        start = Number(conflict.endTime.slice(0, 2)) * 60 + Number(conflict.endTime.slice(3, 5)) + 15;
+        end = start + duration;
+        conflict = blocks.find(block => block.date === selectedDate && start < (Number(block.endTime.slice(0, 2)) * 60 + Number(block.endTime.slice(3, 5))) && end > (Number(block.startTime.slice(0, 2)) * 60 + Number(block.startTime.slice(3, 5))));
+      }
+      if (end > 21 * 60) continue;
+      const timeLabel = (minutes: number) => `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+      additions.push({
+        id: `auto_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        date: selectedDate,
+        title: commitment.title,
+        startTime: timeLabel(start),
+        endTime: timeLabel(end),
+        type: commitment.type === 'Class' ? 'class' : commitment.priority === 'high' ? 'deep-work' : 'study',
+        completed: false,
+        commitmentId: commitment.id,
+      });
+      cursor = end + 20;
+    }
+    if (!additions.length) {
+      setAutoScheduleNotice('There isn’t enough open time left today. Choose another day to place these tasks.');
+      return;
+    }
+    saveBlocks([...blocks, ...additions]);
+    setAutoScheduleNotice(`${additions.length} pending task${additions.length === 1 ? '' : 's'} placed into open time on the selected day.`);
   };
 
   // Validate and submit new block
@@ -256,18 +310,18 @@ export const DailyPlannerView: React.FC = () => {
         <div className="space-y-1.5">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#7C9070]/10 text-[#7C9070] rounded-full text-xs font-semibold">
             <CalendarIcon className="w-3.5 h-3.5" />
-            <span>Time-Blocked Schedule</span>
+            <span>Weekly Planner</span>
           </div>
           <h2 className="text-2xl md:text-3xl font-bold text-[#1A1A1B] tracking-tight">
-            Daily Visual Planner
+            Your week, with room to breathe
           </h2>
           <p className="text-xs md:text-sm text-[#1A1A1B]/60 max-w-xl">
-            Block your calendar around energy peaks, lecture attendance, and dedicated deep-study intervals.
+            See your week at a glance, then choose one day to make a little more spacious.
           </p>
         </div>
 
         {/* Date Selector Navigation */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <div className="flex items-center gap-1 bg-[#FAF9F6] border border-[#EBE9E0] p-1 rounded-2xl">
             <button
               type="button"
@@ -294,6 +348,8 @@ export const DailyPlannerView: React.FC = () => {
             </button>
           </div>
 
+          <button type="button" onClick={handleAutoSchedulePending} className="planner-auto-schedule" aria-label="Auto-schedule pending commitments"><Zap className="w-3.5 h-3.5" /><span>Auto-schedule pending</span></button>
+
           <button
             type="button"
             onClick={handleOpenAddModal}
@@ -304,6 +360,13 @@ export const DailyPlannerView: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {autoScheduleNotice && <div className="planner-auto-notice" role="status"><Sparkles size={15} /><span>{autoScheduleNotice}</span><button type="button" onClick={() => setAutoScheduleNotice(null)} aria-label="Dismiss schedule message">×</button></div>}
+
+      <section className="planner-week-view" aria-label="Choose a day this week">
+        <div className="planner-week-heading"><span>THIS WEEK</span><span>{weekDays[0].key} — {weekDays[6].key}</span></div>
+        <div className="planner-week-grid">{weekDays.map(day => <button type="button" key={day.key} className={`planner-week-day ${selectedDate === day.key ? 'selected' : ''} ${day.today ? 'today' : ''}`} onClick={() => setSelectedDate(day.key)} aria-pressed={selectedDate === day.key}><span>{day.day}</span><b>{day.number}</b><small>{day.dayBlocks.length ? `${day.dayBlocks.length} planned` : day.dueItems.length ? `${day.dueItems.length} due` : 'Open'}</small>{(day.dayBlocks.length > 0 || day.dueItems.length > 0) && <i aria-hidden="true" />}</button>)}</div>
+      </section>
 
       {/* Main Grid: Left Timeline and Right Task Queue */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -592,3 +655,4 @@ export const DailyPlannerView: React.FC = () => {
     </div>
   );
 };
+
