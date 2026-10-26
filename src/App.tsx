@@ -14,10 +14,11 @@ import { SettingsView } from './components/SettingsView';
 import { CommitmentsFeed } from './components/CommitmentsFeed';
 import { InsightsView } from './components/InsightsView';
 import { RemindersView } from './components/RemindersView';
+import { ResourcesView } from './components/ResourcesView';
 import { 
   LayoutDashboard, Calendar as CalendarIcon, BookOpen, 
   Shield, Lock, Sparkles, Clock, Settings, 
-  Target, Bot, Zap, LogOut, ChevronDown, Bell, Search, 
+  Target, Bot, Zap, LogOut, ChevronDown, Bell, Search, Bookmark,
   Maximize2, Plus, CheckCircle2, ChevronRight, Menu, X, ArrowUpRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -31,6 +32,7 @@ type TabType =
   | 'blocklist' 
   | 'calendar' 
   | 'goals' 
+  | 'resources'
   | 'assistant' 
   | 'insights'
   | 'reminders'
@@ -73,13 +75,14 @@ function PulseApp() {
     : [];
 
   const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
+    { id: 'dashboard', label: 'Home', icon: <LayoutDashboard className="w-4 h-4" /> },
     { id: 'database', label: 'Academics', icon: <BookOpen className="w-4 h-4" /> },
     { id: 'commitments', label: 'Commitments', icon: <CheckCircle2 className="w-4 h-4" /> },
     { id: 'planner', label: 'Planner', icon: <Clock className="w-4 h-4" /> },
     { id: 'goals', label: 'Goals', icon: <Target className="w-4 h-4" /> },
-    { id: 'assistant', label: 'Kairo', icon: <Bot className="w-4 h-4" /> },
     { id: 'zen', label: 'Focus Studio', icon: <Shield className="w-4 h-4" /> },
+    { id: 'assistant', label: 'Kairo', icon: <Bot className="w-4 h-4" /> },
+    { id: 'resources', label: 'Resources', icon: <Bookmark className="w-4 h-4" /> },
     { id: 'insights', label: 'Insights', icon: <Zap className="w-4 h-4" /> },
     { id: 'reminders', label: 'Reminders', icon: <Bell className="w-4 h-4" /> },
     { id: 'calendar', label: 'Calendar', icon: <CalendarIcon className="w-4 h-4" /> },
@@ -147,7 +150,7 @@ function PulseApp() {
             {/* Sidebar Navigation */}
             <nav className="workspace-nav">
               <span className="workspace-nav-label">YOUR WORKSPACE</span>
-              {navItems.slice(0, 5).map(item => {
+              {navItems.slice(0, 8).map(item => {
                 const isSelected = activeTab === item.id;
                 return (
                   <button
@@ -170,7 +173,7 @@ function PulseApp() {
                 );
               })}
               <span className="workspace-nav-label workspace-nav-label-tools">STUDY TOOLS</span>
-              {navItems.slice(5).map(item => {
+              {navItems.slice(8).map(item => {
                 const isSelected = activeTab === item.id;
                 return (
                   <button
@@ -345,6 +348,7 @@ function PulseApp() {
                 )}
 
                 {activeTab === 'insights' && <InsightsView />}
+                {activeTab === 'resources' && <ResourcesView />}
 
                 {activeTab === 'reminders' && <RemindersView onOpenCommitments={() => setActiveTab('commitments')} />}
 
