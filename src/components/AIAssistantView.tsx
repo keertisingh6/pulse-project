@@ -1,22 +1,35 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { usePulse } from '../context/PulseContext';
 import { AssistantMessage } from '../types';
-import { 
-  Sparkles, Send, Bot, User, ArrowRight, Clock, 
-  Calendar, CheckCircle2, Shield, RefreshCw, Smile, MessageSquareQuote 
-} from 'lucide-react';
-import { motion } from 'motion/react';
+import { Send, Bot, User, ArrowRight, Shield, RefreshCw } from 'lucide-react';
 import { EyeTracker } from './bencho/EyeTracker';
 
 const SUGGESTED_QUERIES = [
-  "What do I need to finish today?",
-  "When is my next deadline?",
-  "Control Uday Control: Is my schedule overloaded?",
-  "Why this Kolaveri Di with this compiler bug?",
-  "Dekh raha hai Vinod... any overdue tasks?",
-  "Show my upcoming exams and viva schedule",
-  "Aap chronology samajhiye: order my tasks",
+  "Help me plan today",
+  "What deadlines are coming up?",
+  "Which task should I prioritize?",
+  "Break a task into smaller steps",
+  "Help me make a realistic study plan",
 ];
+
+const createWelcomeMessage = (displayName: string, activeCount: number): AssistantMessage => ({
+  id: 'init_1',
+  sender: 'assistant',
+  text: activeCount === 0
+    ? `Hello ${displayName}! I’m Kairo, your study companion. Your workspace is clear. Add assignments in the database or ask me for study planning guidance.`
+    : `Hello ${displayName}! I’m Kairo, your study companion. I can help you plan around your ${activeCount} active commitments. What would you like to work on?`,
+  timestamp: new Date().toISOString(),
+  suggestedActions: [
+    { label: "What should I work on today?", actionType: 'navigate', payload: 'today' },
+    { label: "Check upcoming deadlines", actionType: 'filter', payload: 'deadlines' },
+  ],
+});
+
+const renderInlineMarkdown = (text: string) => text.split(/(\*\*[^*]+\*\*)/g).map((part, index) =>
+  part.startsWith('**') && part.endsWith('**')
+    ? <strong key={index}>{part.slice(2, -2)}</strong>
+    : part
+);
 
 interface AIAssistantViewProps {
   onNavigateToTab: (tab: 'today' | 'calendar' | 'goals' | 'commitments' | 'database') => void;
@@ -27,59 +40,44 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({
   onNavigateToTab, 
   onStartFocusTimer 
 }) => {
-  const { state, askAssistant, setMemePersonalityMode } = usePulse();
+  const { state, askAssistant } = usePulse();
   const displayName = state.user?.name || state.userName || 'Student';
-  const memeMode = state.memePersonalityMode || 'college_friend';
 
   const [inputMessage, setInputMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const sendingRef = useRef(false);
   const [failedQuery, setFailedQuery] = useState<string | null>(null);
   const [failedMessageId, setFailedMessageId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<AssistantMessage[]>(() => {
-    const activeCount = state.commitments.filter(c => !c.completed).length;
-    let initialGreeting = `Hello ${displayName}! I am **Kairo**, your personal student companion. `;
-    if (memeMode !== 'off') {
-      initialGreeting += `Think of me as that one college friend who knows both your syllabus deadlines and the internet. `;
-    }
-    initialGreeting += activeCount === 0
-      ? `Your workspace is currently clear. Add assignments in the database or ask me for study planning guidance.`
-      : `I have full context on your **${activeCount} active commitments** and daily timeline. How can I guide you today?`;
-
-    return [
-      {
-        id: 'init_1',
-        sender: 'assistant',
-        text: initialGreeting,
-        timestamp: new Date().toISOString(),
-        suggestedActions: [
-          { label: "What should I work on today?", actionType: 'navigate', payload: 'today' },
-          { label: "Check upcoming deadlines", actionType: 'filter', payload: 'deadlines' },
-        ],
-      },
-    ];
-  });
+  const [assistantStatus, setAssistantStatus] = useState<'checking' | 'ready' | 'missing-key' | 'unavailable'>('checking');
+  const [messages, setMessages] = useState<AssistantMessage[]>(() => [
+    createWelcomeMessage(displayName, state.commitments.filter(c => !c.completed).length),
+  ]);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    let active = true;
+    fetch('/api/ai/status')
+      .then(response => response.ok ? response.json() : Promise.reject(new Error('Status unavailable')))
+      .then((status: { activeProvider?: string; hasGeminiKey?: boolean }) => {
+        if (!active) return;
+        setAssistantStatus(status.activeProvider?.toLowerCase().includes('gemini') && !status.hasGeminiKey
+          ? 'missing-key'
+          : 'ready');
+      })
+      .catch(() => { if (active) setAssistantStatus('unavailable'); });
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    setMessages(current => current.length === 1 && current[0].id === 'init_1'
+      ? [createWelcomeMessage(displayName, state.commitments.filter(c => !c.completed).length)]
+      : current);
+  }, [displayName, state.commitments]);
+
+  useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
-
-  const cyclePersonalityMode = () => {
-    const modes: Array<'off' | 'college_friend' | 'full_desi'> = ['college_friend', 'full_desi', 'off'];
-    const nextIndex = (modes.indexOf(memeMode) + 1) % modes.length;
-    setMemePersonalityMode(modes[nextIndex]);
-  };
-
-  const getModeLabel = () => {
-    switch (memeMode) {
-      case 'full_desi': return 'Hostelite Banter 🔥';
-      case 'college_friend': return 'Desi Campus Buddy ☕';
-      case 'off': return 'Neutral Mentor 🎓';
-      default: return 'Desi Campus Buddy ☕';
-    }
-  };
 
   const handleSend = async (textToSend?: string) => {
     const query = (textToSend || inputMessage).trim();
@@ -142,15 +140,9 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={cyclePersonalityMode}
-                className="text-[10px] uppercase font-bold tracking-wider text-[#7C9070] hover:text-[#5a6a50] bg-[#7C9070]/10 hover:bg-[#7C9070]/20 px-2.5 py-0.5 rounded-full transition-colors cursor-pointer flex items-center gap-1"
-                title="Click to cycle personality mode: College Buddy / Hostelite / Neutral"
-              >
-                <span>{getModeLabel()}</span>
-                <span className="text-[9px] opacity-60">(click to toggle)</span>
-              </button>
+              <span className="text-[10px] uppercase font-bold tracking-wider text-[#7C9070] bg-[#7C9070]/10 px-2.5 py-0.5 rounded-full">
+                Study companion
+              </span>
               <span className="text-xs text-[#1A1A1B]/40 font-mono">
                 Model: {state.aiProvider === 'gemini' ? 'Gemini 3.8 Flash' : 'Open-Source'}
               </span>
@@ -169,6 +161,17 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({
 
       {/* Chat Conversation Card */}
       <div className="bg-white border border-[#EBE9E0] rounded-[2rem] p-4 md:p-6 shadow-sm flex flex-col h-[520px]">
+
+        {assistantStatus === 'missing-key' && (
+          <div role="status" className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+            Kairo is offline because Gemini isn’t configured. Add <code>GEMINI_API_KEY</code> to the project’s server <code>.env</code> file, then restart Pulse.
+          </div>
+        )}
+        {assistantStatus === 'unavailable' && (
+          <div role="status" className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+            Kairo’s server status is unavailable. Start or restart the Pulse server, then try again.
+          </div>
+        )}
         
         {/* Messages Scroll Area */}
         <div className="flex-1 overflow-y-auto space-y-4 pr-2">
@@ -195,7 +198,7 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({
                       ? 'bg-[#1A1A1B] text-white font-medium rounded-tr-xs'
                       : 'bg-[#FAF9F6] border border-[#EBE9E0] text-[#1A1A1B] rounded-tl-xs font-sans'
                   }`}>
-                    {/* Basic Markdown rendering for bold & blockquotes */}
+                    {/* Render the lightweight Markdown used in Kairo replies. */}
                     <div className="whitespace-pre-wrap space-y-1">
                       {msg.text.split('\n').map((line, i) => {
                         if (line.startsWith('> ')) {
@@ -212,7 +215,10 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({
                             </span>
                           );
                         }
-                        return <p key={i}>{line}</p>;
+                        if (line.startsWith('- ')) {
+                          return <span key={i} className="block pl-2 border-l-2 border-[#7C9070] my-1">{renderInlineMarkdown(line.substring(2))}</span>;
+                        }
+                        return <p key={i}>{renderInlineMarkdown(line)}</p>;
                       })}
                     </div>
                   </div>
@@ -318,3 +324,4 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({
     </div>
   );
 };
+
