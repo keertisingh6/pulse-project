@@ -564,7 +564,6 @@ export const PulseProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             profile: state.profile,
             userName: state.userName || state.user?.name || 'User',
             streakDays: state.streakDays,
-            memePersonalityMode: state.memePersonalityMode || 'college_friend',
           },
         }),
       });
@@ -657,3 +656,4 @@ export const usePulse = () => {
   }
   return context;
 };
+
