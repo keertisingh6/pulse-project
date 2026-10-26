@@ -167,12 +167,12 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({
 
         {assistantStatus === 'missing-key' && (
           <div role="status" className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-            Kairo is offline because Gemini isn’t configured. Add <code>GEMINI_API_KEY</code> to the project’s server <code>.env</code> file, then restart Pulse.
+            Kairo is offline because Gemini isn’t configured. For local development, set <code>GEMINI_API_KEY</code> in the server <code>.env</code> file and restart Pulse. On Vercel, add it in Project Settings → Environment Variables, then redeploy.
           </div>
         )}
         {assistantStatus === 'unavailable' && (
           <div role="status" className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-            Kairo’s server status is unavailable. Start or restart the Pulse server, then try again.
+            Kairo’s API is unavailable. Restart the local Pulse server or check that the latest Vercel deployment completed successfully.
           </div>
         )}
         
