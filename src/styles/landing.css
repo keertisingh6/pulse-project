@@ -841,7 +841,7 @@
 #pulse-workspace .workspace-frame > .flex-1.flex.flex-col.min-w-0 > div.p-4 { padding:14px 22px 24px !important; }
 #pulse-workspace .dashboard-page { width:min(1150px,100%); }
 #pulse-workspace .dashboard-hero { min-height:183px !important;padding:28px 32px !important;border-color:#ece3d4 !important;border-radius:19px !important;background:linear-gradient(90deg,#f0e8d9 0%,#f1eadc 44%,rgba(241,234,220,.42) 65%,rgba(241,234,220,0) 100%) !important;box-shadow:0 10px 30px rgba(92,77,48,.07) !important; }
-#pulse-workspace .dashboard-hero::after { content:"";position:absolute;z-index:0;inset:0 0 0 42%;border-radius:inherit;background-image:linear-gradient(90deg,#f1eadc 0%,rgba(241,234,220,.22) 26%,rgba(241,234,220,0) 54%),url('/pulse-study-space.png');background-size:cover;background-position:center 58%; }
+#pulse-workspace .dashboard-hero::after { content:"";position:absolute;z-index:0;inset:0 0 0 42%;border-radius:inherit;background-image:linear-gradient(90deg,#f1eadc 0%,rgba(241,234,220,.22) 26%,rgba(241,234,220,0) 54%),url('/pulse-study-space.jpg');background-size:cover;background-position:center 58%; }
 #pulse-workspace .dashboard-hero-copy { width:min(510px,65%);z-index:3; }
 #pulse-workspace .dashboard-sky-art,#pulse-workspace .dashboard-particles { display:none !important; }
 #pulse-workspace .dashboard-hero h1 { margin:4px 0 7px !important;color:#29382d !important;font-size:clamp(27px,3vw,38px) !important;line-height:1.04 !important; }
