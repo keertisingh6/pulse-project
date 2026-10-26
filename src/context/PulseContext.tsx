@@ -31,6 +31,8 @@ interface PulseContextType {
   logout: () => void;
   resetAuth: () => void;
   resetAllData: () => void;
+  loadDemoData: () => void;
+  restoreWorkspaceData: () => void;
   clearError: () => void;
 
   // Profile & Setup
@@ -89,6 +91,8 @@ const CLEAN_INITIAL_STATE: PulseState = {
   userName: '',
   aiProvider: 'gemini',
 };
+
+const DEMO_BACKUP_KEY = 'pulse_state_before_demo';
 
 const PulseContext = createContext<PulseContextType | undefined>(undefined);
 
@@ -242,11 +246,13 @@ export const PulseProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const logout = () => {
     localStorage.removeItem('pulse_state');
+    localStorage.removeItem(DEMO_BACKUP_KEY);
     setState(CLEAN_INITIAL_STATE);
   };
 
   const resetAuth = () => {
     localStorage.removeItem('pulse_state');
+    localStorage.removeItem(DEMO_BACKUP_KEY);
     setState(CLEAN_INITIAL_STATE);
   };
 
@@ -262,6 +268,143 @@ export const PulseProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       lastPlanDate: null,
       streakDays: 0,
     }));
+  };
+
+  const loadDemoData = () => {
+    if (!state.demoMode && !localStorage.getItem(DEMO_BACKUP_KEY)) {
+      localStorage.setItem(DEMO_BACKUP_KEY, JSON.stringify(state));
+    }
+
+    const dayKey = (offset: number) => {
+      const date = new Date();
+      date.setHours(12, 0, 0, 0);
+      date.setDate(date.getDate() + offset);
+      return date.toISOString().slice(0, 10);
+    };
+    const timestamp = (offset: number, hour = 12) => {
+      const date = new Date();
+      date.setHours(hour, 0, 0, 0);
+      date.setDate(date.getDate() + offset);
+      return date.toISOString();
+    };
+    const createdAt = timestamp(-8);
+
+    const commitments: Commitment[] = [
+      {
+        id: 'demo-statistics-ps6', title: 'Statistics problem set 6', type: 'Assignment', subject: 'Statistics',
+        description: 'Work through confidence intervals, hypothesis tests, and the short reflection question.',
+        dueDate: dayKey(1), dueTime: '18:00', estimatedEffort: '75 min', effortMinutes: 75, priority: 'high', completed: false,
+        createdAt, source: 'manual', reminders: { oneDayBefore: true, oneHourBefore: true },
+      },
+      {
+        id: 'demo-cogsci-notes', title: 'Cognitive science reading notes', type: 'Task', subject: 'Cognitive Science',
+        description: 'Capture the three main ideas from the attention and memory readings.',
+        dueDate: dayKey(2), dueTime: '20:00', estimatedEffort: '40 min', effortMinutes: 40, priority: 'medium', completed: false,
+        createdAt, source: 'manual', reminders: { oneDayBefore: true },
+      },
+      {
+        id: 'demo-design-synthesis', title: 'Synthesize design interviews', type: 'Assignment', subject: 'Design Studio',
+        description: 'Group interview notes into themes and choose two quotes for the critique.',
+        dueDate: dayKey(3), dueTime: '16:30', estimatedEffort: '90 min', effortMinutes: 90, priority: 'medium', completed: false,
+        createdAt, source: 'manual', reminders: { oneDayBefore: true, atStart: true },
+      },
+      {
+        id: 'demo-methods-quiz', title: 'Research methods quiz review', type: 'Exam', subject: 'Research Methods',
+        description: 'Review sampling, validity, and the practice quiz before Friday.',
+        dueDate: dayKey(4), dueTime: '10:00', estimatedEffort: '60 min', effortMinutes: 60, priority: 'high', completed: false,
+        createdAt, source: 'manual', reminders: { threeDaysBefore: true, oneHourBefore: true },
+      },
+      {
+        id: 'demo-mentor-email', title: 'Send project update to Maya', type: 'Personal', subject: 'Portfolio project',
+        description: 'Share the prototype link and ask one focused feedback question.',
+        dueDate: dayKey(5), dueTime: '12:00', estimatedEffort: '10 min', effortMinutes: 10, priority: 'low', completed: false,
+        createdAt, source: 'manual', reminders: { oneDayBefore: true },
+      },
+      {
+        id: 'demo-lecture-review', title: 'Review yesterday’s lecture', type: 'Task', subject: 'Cognitive Science',
+        dueDate: dayKey(-1), dueTime: '17:00', estimatedEffort: '25 min', effortMinutes: 25, priority: 'low', completed: true,
+        completedAt: timestamp(-1, 17), createdAt, source: 'manual',
+      },
+      {
+        id: 'demo-seminar-reflection', title: 'Submit seminar reflection', type: 'Assignment', subject: 'Research Methods',
+        dueDate: dayKey(-2), dueTime: '23:59', estimatedEffort: '35 min', effortMinutes: 35, priority: 'medium', completed: true,
+        completedAt: timestamp(-2, 15), createdAt, source: 'manual',
+      },
+    ];
+
+    const goals: Goal[] = [
+      {
+        id: 'demo-goal-semester', title: 'Finish the semester feeling prepared', category: 'academic', icon: 'book-open',
+        targetDate: dayKey(45), description: 'Build a steady weekly rhythm across classes without leaving everything to the last week.',
+        milestones: [
+          { id: 'demo-ms-plan', title: 'Map out the next two weeks', completed: true, dueDate: dayKey(-3) },
+          { id: 'demo-ms-statistics', title: 'Complete three statistics practice sets', completed: true, dueDate: dayKey(7) },
+          { id: 'demo-ms-review', title: 'Start a weekly review ritual', completed: false, dueDate: dayKey(14) },
+          { id: 'demo-ms-finals', title: 'Prepare a finals study guide', completed: false, dueDate: dayKey(35) },
+        ],
+        weeklyHoursTarget: 8, color: 'lavender', progressPercentage: 50, createdAt,
+      },
+      {
+        id: 'demo-goal-portfolio', title: 'Shape a thoughtful design portfolio', category: 'career', icon: 'sparkles',
+        targetDate: dayKey(75), description: 'Turn class projects into two clear, well-told case studies.',
+        milestones: [
+          { id: 'demo-ms-pick', title: 'Choose two projects', completed: true },
+          { id: 'demo-ms-story', title: 'Draft the first case study', completed: false, dueDate: dayKey(20) },
+        ],
+        weeklyHoursTarget: 3, color: 'peach', progressPercentage: 50, createdAt,
+      },
+    ];
+
+    const focusSessions: FocusSession[] = [
+      { id: 'demo-focus-today-1', durationMinutes: 32, durationSeconds: 1920, startTime: timestamp(0, 9), endTime: timestamp(0, 9), completedAt: timestamp(0, 9), type: 'study', commitmentId: 'demo-statistics-ps6', notes: 'Statistics problem set' },
+      { id: 'demo-focus-today-2', durationMinutes: 25, durationSeconds: 1500, startTime: timestamp(0, 11), endTime: timestamp(0, 11), completedAt: timestamp(0, 11), type: 'study', commitmentId: 'demo-cogsci-notes', notes: 'Reading notes' },
+      { id: 'demo-focus-yesterday', durationMinutes: 45, durationSeconds: 2700, startTime: timestamp(-1, 10), endTime: timestamp(-1, 10), completedAt: timestamp(-1, 10), type: 'study', notes: 'Quiet morning study' },
+      { id: 'demo-focus-two-days', durationMinutes: 38, durationSeconds: 2280, startTime: timestamp(-3, 14), endTime: timestamp(-3, 14), completedAt: timestamp(-3, 14), type: 'study', notes: 'Research methods review' },
+      { id: 'demo-focus-four-days', durationMinutes: 52, durationSeconds: 3120, startTime: timestamp(-5, 9), endTime: timestamp(-5, 9), completedAt: timestamp(-5, 9), type: 'study', notes: 'Design studio work' },
+    ];
+
+    const dailyPlan: DailyPlanItem[] = [
+      { id: 'demo-plan-1', title: 'Review lecture notes', timeSlot: '09:00 – 09:35', type: 'study', subject: 'Cognitive Science', isCompleted: true, estimatedMinutes: 35, commitmentId: 'demo-lecture-review' },
+      { id: 'demo-plan-2', title: 'Statistics problem set', timeSlot: '10:00 – 11:15', type: 'study', subject: 'Statistics', isCompleted: false, estimatedMinutes: 75, commitmentId: 'demo-statistics-ps6' },
+      { id: 'demo-plan-3', title: 'Lunch & a short walk', timeSlot: '12:00 – 12:45', type: 'break', isCompleted: false, estimatedMinutes: 45 },
+      { id: 'demo-plan-4', title: 'Organize interview themes', timeSlot: '14:00 – 15:00', type: 'work', subject: 'Design Studio', isCompleted: false, estimatedMinutes: 60, commitmentId: 'demo-design-synthesis' },
+    ];
+
+    setState({
+      ...CLEAN_INITIAL_STATE,
+      user: null,
+      userName: 'Avery Chen',
+      hasEnteredWorkspace: true,
+      demoMode: true,
+      profile: {
+        college: 'Northstar University', branch: 'Cognitive Science', semester: 'Fall 2026',
+        targetGoals: ['Stay ahead of coursework', 'Build a design portfolio'], studyRhythm: 'balanced',
+        focusBlockMinutes: 45, dailyAvailableHours: 6, hasCompletedSetup: true,
+      },
+      commitments,
+      goals,
+      focusSessions,
+      dailyPlan,
+      planConflicts: [],
+      lastPlanDate: dayKey(0),
+      streakDays: 4,
+    });
+  };
+
+  const restoreWorkspaceData = () => {
+    const saved = localStorage.getItem(DEMO_BACKUP_KEY);
+    localStorage.removeItem(DEMO_BACKUP_KEY);
+    if (!saved) {
+      setState(CLEAN_INITIAL_STATE);
+      return;
+    }
+    try {
+      const previous = JSON.parse(saved) as PulseState;
+      setState({ ...CLEAN_INITIAL_STATE, ...previous, demoMode: false });
+    } catch (restoreError) {
+      console.error('Could not restore the previous workspace', restoreError);
+      setState(CLEAN_INITIAL_STATE);
+    }
   };
 
   const updateProfile = (updates: Partial<StudentProfile>) => {
@@ -580,6 +723,8 @@ export const PulseProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         logout,
         resetAuth,
         resetAllData,
+        loadDemoData,
+        restoreWorkspaceData,
         clearError,
         updateProfile,
         updateUserName,
