@@ -173,12 +173,14 @@ const getCommitmentHealth = (c: Commitment, now: Date = new Date()) => {
   }
 };
 
-export const CommitmentsFeed: React.FC = () => {
+export const CommitmentsFeed: React.FC<{ initialSearch?: string }> = ({ initialSearch = '' }) => {
   const { state, addCommitment, toggleCommitment, deleteCommitment } = usePulse();
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [selectedType, setSelectedType] = useState<string>('All');
   const [showAddForm, setShowAddForm] = useState(false);
   const [expandedCommitment, setExpandedCommitment] = useState<string | null>(null);
+
+  useEffect(() => setSearchQuery(initialSearch), [initialSearch]);
 
   // Dynamic live clock for updating overdue badges without requiring page refresh
   const [currentTime, setCurrentTime] = useState<Date>(() => new Date());
