@@ -21,6 +21,7 @@ import {
 export const FocusStudio: React.FC = () => {
   const {
     tasks,
+    commitments,
     activeTaskId,
     setActiveTaskId,
     logFocusSession,
@@ -40,7 +41,10 @@ export const FocusStudio: React.FC = () => {
 
   const [isZenMode, setIsZenMode] = useState(false);
 
+  // Active target can be a commitment or task
+  const activeCommitment = commitments.find(c => c.id === activeTaskId);
   const activeTask = tasks.find(t => t.id === activeTaskId);
+  const targetTitle = activeCommitment?.title || activeTask?.title || 'General Academic Focus';
 
   const handleStartPause = () => {
     if (!isFocusRunning) {
@@ -57,7 +61,7 @@ export const FocusStudio: React.FC = () => {
         : focusMode === 'pomodoro'
         ? 25
         : 50;
-    logFocusSession(minutesCompleted, 'Manual session logged', activeTaskId || undefined);
+    logFocusSession(minutesCompleted, `Focused on ${targetTitle}`, activeTaskId || undefined);
     resetFocusTimer();
   };
 
@@ -101,22 +105,22 @@ export const FocusStudio: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#EAF4EE] text-[#1E3A2B] border border-[#D5EADB] text-xs font-bold font-mono">
-            <Clock className="w-3.5 h-3.5" />
-            <span>{focusMinutesToday}m focused today</span>
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-white border border-[#E8E2D5] shadow-2xs text-xs font-semibold text-[#58615A]">
+            <Flame className="w-3.5 h-3.5 text-[#D4A034]" />
+            <span>Today: {focusMinutesToday}m Deep Work</span>
           </div>
 
           <button
             onClick={() => setIsZenMode(!isZenMode)}
-            className="p-2 rounded-2xl bg-white hover:bg-[#F4EFE6] text-[#1E2621] border border-[#E8E2D5] shadow-2xs transition-all"
-            title={isZenMode ? 'Exit Zen Mode' : 'Fullscreen Zen Mode'}
+            className="p-2 rounded-2xl bg-white border border-[#E8E2D5] text-[#58615A] hover:text-[#1E2621] shadow-2xs hover:bg-[#FBF9F5] transition-all"
+            title={isZenMode ? 'Exit Zen Mode' : 'Enter Zen Fullscreen'}
           >
             {isZenMode ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
           </button>
         </div>
       </div>
 
-      {/* 2. Main Focus Center Card */}
+      {/* 2. Main Studio Timer Hub */}
       <div className="p-8 sm:p-12 rounded-3xl bg-white border border-[#E8E2D5] shadow-card text-center space-y-8 relative overflow-hidden">
         {/* Mode Selector Tabs */}
         <div className="inline-flex items-center p-1.5 rounded-2xl bg-[#FBF9F5] border border-[#EDE8DE] shadow-2xs">
@@ -163,6 +167,13 @@ export const FocusStudio: React.FC = () => {
             className="w-full px-4 py-2.5 rounded-2xl bg-[#FBF9F5] border border-[#D8D1C3] text-xs font-bold text-[#1E2621] text-center focus:outline-hidden focus:border-[#1E3A2B] shadow-2xs"
           >
             <option value="">General Academic Focus</option>
+            {commitments
+              .filter(c => c.status !== 'completed')
+              .map(c => (
+                <option key={c.id} value={c.id}>
+                  {c.title} ({c.estimatedHours}h • {c.tag})
+                </option>
+              ))}
             {tasks
               .filter(t => t.status !== 'completed')
               .map(t => (
@@ -189,12 +200,12 @@ export const FocusStudio: React.FC = () => {
               cy="128"
               r="110"
               stroke="#1E3A2B"
-              strokeWidth="6.5"
+              strokeWidth="7"
               strokeDasharray={strokeCircumference}
               strokeDashoffset={strokeOffset}
               strokeLinecap="round"
               fill="none"
-              className="transition-all duration-700"
+              className="transition-all duration-1000 ease-linear"
             />
           </svg>
 
@@ -318,7 +329,9 @@ export const FocusStudio: React.FC = () => {
                   </div>
                   <div>
                     <h4 className="text-xs font-bold text-[#1E2621]">{session.taskTitle}</h4>
-                    <p className="text-[10px] text-[#7A837C]">{new Date(session.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                    <p className="text-[10px] text-[#7A837C]">
+                      {new Date(session.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </p>
                   </div>
                 </div>
 

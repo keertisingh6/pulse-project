@@ -480,13 +480,40 @@ function loadFromStorage<T>(key: string, fallback: T): T {
   }
 }
 
+let syncTimeout: any = null;
+function triggerBackendSync() {
+  if (syncTimeout) clearTimeout(syncTimeout);
+  syncTimeout = setTimeout(() => {
+    try {
+      const payload = {
+        profile: loadFromStorage(STORAGE_KEYS.PROFILE, SEED_PROFILE),
+        commitments: loadFromStorage(STORAGE_KEYS.COMMITMENTS, getSeedCommitments()),
+        tasks: loadFromStorage(STORAGE_KEYS.TASKS, getSeedTasks()),
+        subjects: loadFromStorage(STORAGE_KEYS.SUBJECTS, getSeedSubjects()),
+        goals: loadFromStorage(STORAGE_KEYS.GOALS, getSeedGoals()),
+        habits: loadFromStorage(STORAGE_KEYS.HABITS, getSeedHabits()),
+        focusSessions: loadFromStorage(STORAGE_KEYS.SESSIONS, getSeedFocusSessions()),
+        plannerBlocks: loadFromStorage(STORAGE_KEYS.PLANNER, getSeedPlanner()),
+        updatedAt: new Date().toISOString()
+      };
+      fetch('/api/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).catch(() => {});
+    } catch (e) {}
+  }, 1000);
+}
+
 function saveToStorage<T>(key: string, data: T): void {
   try {
     localStorage.setItem(key, JSON.stringify(data));
+    triggerBackendSync();
   } catch (e) {
-    console.error(`Failed to save ${key}:`, e);
+    console.error('Failed to save ' + key, e);
   }
 }
+
 
 export const StorageService = {
   getProfile: (): UserProfile => loadFromStorage(STORAGE_KEYS.PROFILE, SEED_PROFILE),

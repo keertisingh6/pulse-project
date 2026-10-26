@@ -15,13 +15,15 @@ import {
   Layers,
   ArrowRight
 } from 'lucide-react';
+import { ResourceModal } from '../modals/ResourceModal';
 
 export const ResourcesView: React.FC = () => {
   const { showToast } = usePulse();
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState<'All' | 'Cheat Sheets' | 'Lab Manuals' | 'Question Papers' | 'Templates'>('All');
+  const [isUploadOpen, setIsUploadOpen] = useState(false);
 
-  const resources = [
+  const [resourcesList, setResourcesList] = useState([
     {
       id: 'res-1',
       title: 'Data Structures & Algorithms Complete Cheat Sheet',
@@ -82,9 +84,23 @@ export const ResourcesView: React.FC = () => {
       accent: '#236B43',
       downloads: '620'
     }
-  ];
+  ]);
 
-  const filtered = resources.filter(res => {
+  const handleAddResource = (newRes: any) => {
+    setResourcesList(prev => [newRes, ...prev]);
+  };
+
+  const handleDownload = (res: any) => {
+    const dummyBlob = new Blob([`Pulse Academic Resource: ${res.title}\nCategory: ${res.category}\nSubject: ${res.subject}`], { type: 'text/plain' });
+    const url = URL.createObjectURL(dummyBlob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${res.title.replace(/[^a-zA-Z0-9]/g, '_')}.txt`;
+    a.click();
+    showToast(`Downloaded "${res.title}"`, 'success');
+  };
+
+  const filtered = resourcesList.filter(res => {
     const matchesCategory = activeCategory === 'All' || res.category === activeCategory;
     const matchesSearch =
       res.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -106,8 +122,8 @@ export const ResourcesView: React.FC = () => {
         </div>
 
         <button
-          onClick={() => showToast('Opening resource submission portal...', 'info')}
-          className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-[#1E3A2B] hover:bg-[#284E3A] text-white text-xs font-bold shadow-sm transition-all"
+          onClick={() => setIsUploadOpen(true)}
+          className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-[#1E3A2B] hover:bg-[#284E3A] text-white text-xs font-bold shadow-sm transition-all cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>Upload Resource</span>
@@ -134,7 +150,7 @@ export const ResourcesView: React.FC = () => {
             <button
               key={cat}
               onClick={() => setActiveCategory(cat)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
                 activeCategory === cat
                   ? 'bg-[#1E3A2B] text-white shadow-xs'
                   : 'bg-white text-[#58615A] hover:bg-[#EDE9DF] border border-[#E3DDD0]'
@@ -173,8 +189,8 @@ export const ResourcesView: React.FC = () => {
               <span className="text-xs text-[#7A837C] font-mono">{res.format}</span>
 
               <button
-                onClick={() => showToast(`Downloaded "${res.title}"`, 'success')}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FBF9F5] hover:bg-[#1E3A2B] text-[#1E2621] hover:text-white border border-[#EDE8DE] hover:border-[#1E3A2B] text-xs font-semibold transition-all group/btn"
+                onClick={() => handleDownload(res)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FBF9F5] hover:bg-[#1E3A2B] text-[#1E2621] hover:text-white border border-[#EDE8DE] hover:border-[#1E3A2B] text-xs font-semibold transition-all group/btn cursor-pointer"
               >
                 <Download className="w-3.5 h-3.5" />
                 <span>Get</span>
@@ -183,6 +199,13 @@ export const ResourcesView: React.FC = () => {
           </div>
         ))}
       </div>
+
+      {/* Upload Modal */}
+      <ResourceModal
+        isOpen={isUploadOpen}
+        onClose={() => setIsUploadOpen(false)}
+        onAddResource={handleAddResource}
+      />
     </div>
   );
 };

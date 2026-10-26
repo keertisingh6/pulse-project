@@ -15,10 +15,23 @@ import { SettingsModal } from './components/settings/SettingsModal';
 import { CommandPalette } from './components/common/CommandPalette';
 import { LiveFocusCapsule } from './components/common/LiveFocusCapsule';
 import { FloatingKairoDrawer } from './components/common/FloatingKairoDrawer';
+import { CommitmentModal } from './components/modals/CommitmentModal';
+import { GoalModal } from './components/modals/GoalModal';
+import { SubjectModal } from './components/modals/SubjectModal';
+import { SubjectDetailModal } from './components/modals/SubjectDetailModal';
+import { ScheduleModal } from './components/modals/ScheduleModal';
+import { NotificationsDrawer } from './components/modals/NotificationsDrawer';
 import { CheckCircle2, AlertCircle, Info } from 'lucide-react';
 
 const MainContent: React.FC = () => {
-  const { currentView, toast } = usePulse();
+  const {
+    currentView,
+    toast,
+    selectedSubjectForDetail,
+    setSelectedSubjectForDetail,
+    isNotificationsOpen,
+    setIsNotificationsOpen
+  } = usePulse();
 
   const renderView = () => {
     switch (currentView) {
@@ -70,6 +83,20 @@ const MainContent: React.FC = () => {
 
       {/* Omnipresent Floating Kairo AI Drawer */}
       <FloatingKairoDrawer />
+
+      {/* Interactive Creation & Detail Modals */}
+      <CommitmentModal />
+      <GoalModal />
+      <SubjectModal />
+      <SubjectDetailModal
+        subject={selectedSubjectForDetail}
+        onClose={() => setSelectedSubjectForDetail(null)}
+      />
+      <ScheduleModal />
+      <NotificationsDrawer
+        isOpen={isNotificationsOpen}
+        onClose={() => setIsNotificationsOpen(false)}
+      />
 
       {/* Toast Feedback Notification */}
       {toast && (

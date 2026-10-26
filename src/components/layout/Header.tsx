@@ -6,7 +6,9 @@ export const Header: React.FC = () => {
   const {
     currentView,
     setIsCommandPaletteOpen,
-    setCurrentView
+    setCurrentView,
+    notifications,
+    setIsNotificationsOpen
   } = usePulse();
 
   const viewBreadcrumbs: Record<string, { label: string; placeholder: string }> = {
@@ -49,6 +51,7 @@ export const Header: React.FC = () => {
   };
 
   const currentInfo = viewBreadcrumbs[currentView] || viewBreadcrumbs.home;
+  const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
     <header className="h-16 px-6 lg:px-8 py-3 bg-[#F4EFE6] flex items-center justify-between gap-4 sticky top-0 z-30 flex-shrink-0">
@@ -72,18 +75,23 @@ export const Header: React.FC = () => {
           <span className="text-xs font-normal text-[#7A837C] truncate">
             {currentInfo.placeholder}
           </span>
+          <kbd className="hidden sm:inline-block ml-auto text-[10px] font-mono px-1.5 py-0.5 rounded-md bg-[#EDE8DE] text-[#7A837C] border border-[#DDD6C8]">
+            ⌘K
+          </kbd>
         </div>
       </div>
 
       {/* Right Actions: Notification Bell + Avatar Circle 'S' */}
       <div className="flex items-center gap-3">
         <button
-          onClick={() => setIsCommandPaletteOpen(true)}
+          onClick={() => setIsNotificationsOpen(true)}
           className="p-2 rounded-full hover:bg-[#EAE4D7] text-[#4A534C] transition-colors relative"
           title="Notifications & Alerts"
         >
           <Bell className="w-4 h-4" />
-          <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-[#D46247]" />
+          {unreadCount > 0 && (
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#D46247] ring-2 ring-[#F4EFE6]" />
+          )}
         </button>
 
         <div

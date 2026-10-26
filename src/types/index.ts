@@ -192,3 +192,22 @@ export interface UserProfile {
   aiModel: string;
   useMockAI: boolean;
 }
+
+export interface NotificationItem {
+  id: string;
+  title: string;
+  description: string;
+  time: string;
+  type: 'deadline' | 'exam' | 'habit' | 'ai';
+  read: boolean;
+  actionView?: string;
+}
+
+export interface ResourceItem {
+  id: string;
+  title: string;
+  category: 'Cheat Sheets' | 'Lab Manuals' | 'Question Papers' | 'Templates';
+  subject: string;
+  format: string;
+  downloads: string;
+}
