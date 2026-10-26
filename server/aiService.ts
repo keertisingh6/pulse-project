@@ -471,8 +471,21 @@ Respond in JSON format:
         suggestedActions: Array.isArray(parsed.suggestedActions) ? parsed.suggestedActions : [],
       };
     } catch (err) {
-      console.error("Assistant chat request failed.");
-      throw new Error("Kairo could not get a response from Gemini. Check the server configuration and try again.");
+      const providerError = err as { status?: number | string; code?: string; message?: string };
+      const status = Number(providerError?.status || 0);
+      const code = String(providerError?.code || providerError?.status || '').toLowerCase();
+      const description = String(providerError?.message || '').toLowerCase();
+      console.error("Assistant chat request failed.", { status: status || code || undefined });
+      if (status === 401 || status === 403 || /unauthenticated|permission_denied|invalid api key/.test(code + ' ' + description)) {
+        throw new Error("Gemini rejected the configured API key. Check GEMINI_API_KEY in the server or Vercel environment variables.");
+      }
+      if (status === 429 || /resource_exhausted|rate limit|quota/.test(code + ' ' + description)) {
+        throw new Error("Gemini is temporarily rate-limited. Please wait a moment and try again.");
+      }
+      if (status === 404 || /model.*not found|not_found/.test(code + ' ' + description)) {
+        throw new Error("The configured Gemini model is unavailable. Check the model access for this API key.");
+      }
+      throw new Error("Kairo could not get a response from Gemini. Check the deployment logs and try again.");
     }
   }
 }
