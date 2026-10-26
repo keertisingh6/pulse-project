@@ -136,6 +136,7 @@ export const DailyPlannerView: React.FC<{ initialDate?: string }> = ({ initialDa
     const dueItems = state.commitments.filter(item => !item.completed && item.dueDate === key);
     return { key, day: date.toLocaleDateString('en-US', { weekday: 'short' }), number: date.getDate(), dayBlocks, dueItems, today: key === formatDateToLocalISO(new Date()) };
   });
+  const calendarHours = [8, 10, 12, 14, 16, 18];
 
   // Filter tasks strictly for the selected date
   const currentDateBlocks = blocks
@@ -366,6 +367,26 @@ export const DailyPlannerView: React.FC<{ initialDate?: string }> = ({ initialDa
       <section className="planner-week-view" aria-label="Choose a day this week">
         <div className="planner-week-heading"><span>THIS WEEK</span><span>{weekDays[0].key} — {weekDays[6].key}</span></div>
         <div className="planner-week-grid">{weekDays.map(day => <button type="button" key={day.key} className={`planner-week-day ${selectedDate === day.key ? 'selected' : ''} ${day.today ? 'today' : ''}`} onClick={() => setSelectedDate(day.key)} aria-pressed={selectedDate === day.key}><span>{day.day}</span><b>{day.number}</b><small>{day.dayBlocks.length ? `${day.dayBlocks.length} planned` : day.dueItems.length ? `${day.dueItems.length} due` : 'Open'}</small>{(day.dayBlocks.length > 0 || day.dueItems.length > 0) && <i aria-hidden="true" />}</button>)}</div>
+      </section>
+
+      <section className="planner-calendar-shell" aria-label="Weekly schedule grid">
+        <div className="planner-calendar-grid">
+          <div className="planner-calendar-corner">TIME</div>
+          {weekDays.map(day => <button type="button" key={`head-${day.key}`} className={`planner-calendar-dayhead ${day.today ? 'today' : ''}`} onClick={() => setSelectedDate(day.key)}>{day.day}<b>{day.number}</b></button>)}
+          {calendarHours.map(hour => <React.Fragment key={hour}>
+            <div className="planner-calendar-time">{hour > 12 ? `${hour - 12} PM` : hour === 12 ? '12 PM' : `${hour} AM`}</div>
+            {weekDays.map(day => {
+              const blocksInSlot = day.dayBlocks.filter(block => {
+                const start = Number(block.startTime.slice(0, 2)) * 60 + Number(block.startTime.slice(3, 5));
+                return start >= hour * 60 && start < (hour + 2) * 60;
+              });
+              return <div key={`${day.key}-${hour}`} className={`planner-calendar-slot ${selectedDate === day.key ? 'selected-day' : ''}`} onClick={() => setSelectedDate(day.key)}>
+                {blocksInSlot.map(block => <article key={block.id} className={`planner-week-block ${block.type} ${block.completed ? 'completed' : ''}`}><b>{block.title}</b><small>{block.startTime} – {block.endTime}</small></article>)}
+                {hour === 10 && day.dueItems.filter(item => !day.dayBlocks.some(block => block.commitmentId === item.id)).map(item => <button key={item.id} type="button" className="planner-week-deadline-pill" onClick={event => { event.stopPropagation(); handleSlotCommitment(item); setSelectedDate(day.key); }} title={`Schedule ${item.title}`}><span>{item.title}</span><small>Due</small></button>)}
+              </div>;
+            })}
+          </React.Fragment>)}
+        </div>
       </section>
 
       {/* Main Grid: Left Timeline and Right Task Queue */}
