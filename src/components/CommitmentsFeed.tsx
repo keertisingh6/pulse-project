@@ -174,12 +174,11 @@ const getCommitmentHealth = (c: Commitment, now: Date = new Date()) => {
 };
 
 export const CommitmentsFeed: React.FC = () => {
-  const { state, addCommitment, toggleCommitment, deleteCommitment, getMemeReaction } = usePulse();
+  const { state, addCommitment, toggleCommitment, deleteCommitment } = usePulse();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<string>('All');
   const [showAddForm, setShowAddForm] = useState(false);
   const [expandedCommitment, setExpandedCommitment] = useState<string | null>(null);
-  const [completionToast, setCompletionToast] = useState<{ badgeText: string; reactionText: string } | null>(null);
 
   // Dynamic live clock for updating overdue badges without requiring page refresh
   const [currentTime, setCurrentTime] = useState<Date>(() => new Date());
@@ -190,25 +189,7 @@ export const CommitmentsFeed: React.FC = () => {
     return () => clearInterval(timer);
   }, []);
 
-  const handleToggleCommitment = (c: Commitment) => {
-    const willBeCompleted = !c.completed;
-    toggleCommitment(c.id);
-
-    if (willBeCompleted && state.memePersonalityMode !== 'off') {
-      const reaction = getMemeReaction({
-        type: 'task_completed',
-        taskTitle: c.title,
-        sourceScreen: 'commitments',
-      });
-      setCompletionToast({
-        badgeText: reaction.badgeText,
-        reactionText: reaction.reactionText,
-      });
-      setTimeout(() => {
-        setCompletionToast(null);
-      }, 5000);
-    }
-  };
+  const handleToggleCommitment = (c: Commitment) => toggleCommitment(c.id);
 
   // New Commitment Form State
   const [newTitle, setNewTitle] = useState('');
@@ -797,27 +778,6 @@ export const CommitmentsFeed: React.FC = () => {
         </form>
       )}
 
-      {/* Contextual Text Reaction Banner from MemeManager (Zero Images) */}
-      {completionToast && (
-        <div className="bg-[#FAF9F6] border border-[#7C9070]/30 rounded-2xl p-3.5 flex items-center justify-between gap-3 text-xs shadow-sm">
-          <div className="flex items-center gap-2.5">
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#7C9070]/15 text-[#7C9070] border border-[#7C9070]/20 shrink-0">
-              {completionToast.badgeText}
-            </span>
-            <span className="text-[#1A1A1B]/80 font-medium leading-relaxed">
-              {completionToast.reactionText}
-            </span>
-          </div>
-          <button 
-            type="button"
-            onClick={() => setCompletionToast(null)}
-            className="text-[#1A1A1B]/40 hover:text-[#1A1A1B] text-xs font-bold px-2 py-0.5 rounded-lg cursor-pointer shrink-0"
-          >
-            ✕
-          </button>
-        </div>
-      )}
-
       {/* Commitments List Feed */}
       <div className="space-y-3.5">
         {filteredCommitments.length === 0 ? (
@@ -1130,3 +1090,4 @@ export const CommitmentsFeed: React.FC = () => {
     </div>
   );
 };
+
