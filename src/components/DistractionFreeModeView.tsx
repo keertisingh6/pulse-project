@@ -367,7 +367,7 @@ export const DistractionFreeModeView: React.FC<{ onExit?: () => void }> = ({ onE
   const allTimeSessionsCount = state.focusSessions.length;
 
   return (
-    <div className="relative min-h-[620px] rounded-[2.5rem] bg-gradient-to-b from-[#18231E] via-[#121B17] to-[#0A100E] text-white p-6 sm:p-8 md:p-12 shadow-2xl flex flex-col justify-between overflow-hidden border border-emerald-950/40 select-none">
+    <div className="focus-studio-view relative min-h-[620px] rounded-[2.5rem] bg-gradient-to-b from-[#18231E] via-[#121B17] to-[#0A100E] text-white p-6 sm:p-8 md:p-12 shadow-2xl flex flex-col justify-between overflow-hidden border border-emerald-950/40 select-none">
       
       {/* Background ambient subtle glow */}
       <div className={`absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full blur-3xl pointer-events-none transition-all duration-1000 ${
@@ -765,3 +765,4 @@ export const DistractionFreeModeView: React.FC<{ onExit?: () => void }> = ({ onE
     </div>
   );
 };
+
