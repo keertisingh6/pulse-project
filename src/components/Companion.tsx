@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import { usePulse } from '../context/PulseContext';
 import { KairoCompanion } from './Illustrations';
-import { Sparkles, Edit2, Check, Smile, MessageSquareQuote } from 'lucide-react';
-import { getContextualCompanionMemeNote } from '../utils/memeEngine';
+import { Sparkles, Edit2, Check } from 'lucide-react';
 
 export const Companion: React.FC = () => {
-  const { state, updateUserName, setMemePersonalityMode } = usePulse();
+  const { state, updateUserName } = usePulse();
   const [isEditing, setIsEditing] = useState(false);
   const [tempName, setTempName] = useState(state.userName);
   const [expression, setExpression] = useState<'calm' | 'happy' | 'thinking'>('calm');
@@ -33,19 +32,14 @@ export const Companion: React.FC = () => {
     return `${timeGreeting}, ${displayName} 👋`;
   };
 
-  const currentMode = state.memePersonalityMode || 'college_friend';
-  const companionNote = getContextualCompanionMemeNote(state, currentMode);
+  const companionMessage = pendingCount === 0
+    ? 'Your list is clear for now. Take a breath, or add something new whenever you are ready.'
+    : `You have ${pendingCount} open ${pendingCount === 1 ? 'commitment' : 'commitments'}. Choose one small next step, and let the rest wait their turn.`;
 
   return (
     <div className="bg-white rounded-[2rem] p-8 border border-[#EBE9E0] shadow-sm relative overflow-hidden" id="companion-panel">
       {/* Absolute top right badges */}
       <div className="absolute top-6 right-6 flex items-center gap-2">
-        {companionNote.memeTitle && (
-          <span className="hidden sm:inline-flex items-center gap-1 bg-amber-500/10 text-amber-700 border border-amber-500/20 px-3 py-1 rounded-full text-xs font-semibold">
-            <MessageSquareQuote className="w-3.5 h-3.5" />
-            <span>{companionNote.memeTitle}</span>
-          </span>
-        )}
         <div className="flex items-center gap-1.5 bg-[#7C9070]/10 text-[#7C9070] px-3.5 py-1.5 rounded-full text-xs font-semibold">
           <Sparkles className="w-3.5 h-3.5" />
           <span>{state.streakDays} Day Streak</span>
@@ -104,13 +98,13 @@ export const Companion: React.FC = () => {
           </div>
 
           <p className="text-[#1A1A1B]/75 text-sm md:text-base leading-relaxed max-w-xl italic font-serif">
-            "{companionNote.message}"
+            "{companionMessage}"
           </p>
 
           {/* Prompt tips & Personality Indicator */}
           <div className="mt-4 flex flex-wrap gap-2 justify-center sm:justify-start items-center">
             <span className="text-[11px] bg-[#FAF9F6] text-[#7C9070] border border-[#7C9070]/20 px-3 py-1 rounded-full font-bold">
-              {companionNote.badge}
+              Pulse study companion
             </span>
             <span className="text-[11px] bg-[#FAF9F6] text-[#1A1A1B]/60 border border-[#EBE9E0] px-3 py-1 rounded-full font-medium">
               💡 {pendingCount === 0 ? "Everything can wait if you need to breathe." : "Mindful progress beats last-minute cramming."}
@@ -121,3 +115,4 @@ export const Companion: React.FC = () => {
     </div>
   );
 };
+
