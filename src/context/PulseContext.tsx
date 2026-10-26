@@ -568,21 +568,22 @@ export const PulseProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           },
         }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new Error(typeof data?.error === 'string' ? data.error : `Kairo request failed (${res.status}). Please try again.`);
+      }
+      if (!data || typeof data.reply !== 'string' || !data.reply.trim()) {
+        throw new Error('Kairo returned an invalid response. Please try again.');
+      }
       return {
         id: 'ast_' + Math.random().toString(36).substring(2, 9),
         sender: 'assistant',
-        text: data.reply || 'I am ready to help organize your schedule.',
+        text: data.reply,
         timestamp: new Date().toISOString(),
         suggestedActions: data.suggestedActions || [],
       };
     } catch (err) {
-      return {
-        id: 'ast_' + Math.random().toString(36).substring(2, 9),
-        sender: 'assistant',
-        text: "I couldn't reach the AI server right now, but your Pulse workspace is active.",
-        timestamp: new Date().toISOString(),
-      };
+      throw err;
     }
   };
 

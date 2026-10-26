@@ -1,20 +1,22 @@
 import React, { useState } from 'react';
 import { usePulse } from '../context/PulseContext';
 import { 
-  Plus, Check, Circle, CheckCircle2, ChevronRight, 
+  Plus, Check, CheckCircle2, ChevronRight, 
   Sparkles, Trophy, BookOpen, Clock, Flame, 
   RotateCcw, Shield, Award, ArrowUpRight, BarChart3,
   Calendar, Coffee, MoreHorizontal, Play, Pause, Edit2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { getLocalTodayDateString, formatDeadlineDisplay, isTaskOverdue } from '../utils/deadlineUtils';
+import { getLocalTodayDateString } from '../utils/deadlineUtils';
+import { TodoTower } from './bencho/TodoTower';
+import { Particles } from './bencho/Particles';
 
 interface FocusMateDashboardProps {
   onNavigateToTab: (tab: any) => void;
 }
 
 export const FocusMateDashboard: React.FC<FocusMateDashboardProps> = ({ onNavigateToTab }) => {
-  const { state, toggleCommitment, addCommitment, addFocusSession } = usePulse();
+  const { state, updateCommitment, addCommitment, addFocusSession } = usePulse();
   const displayName = state.user?.name || state.userName || 'Keerti';
 
   // Quick task input state
@@ -98,7 +100,7 @@ export const FocusMateDashboard: React.FC<FocusMateDashboardProps> = ({ onNaviga
   ];
 
   const activeCommitments = state.commitments.filter(c => !c.completed);
-  const todayTasks = activeCommitments.slice(0, 4);
+  const towerItems = activeCommitments.slice(0, 8).map(({ id, title }) => ({ id, title }));
 
   return (
     <div className="space-y-6">
@@ -150,6 +152,17 @@ export const FocusMateDashboard: React.FC<FocusMateDashboardProps> = ({ onNaviga
           </div>
         </div>
       </div>
+
+      {/* A small interactive reset, kept secondary to tasks and focus controls. */}
+      <section className="bg-white border border-[#EBE9E0] rounded-[2rem] px-5 py-3 shadow-sm flex items-center justify-between gap-4 overflow-hidden" aria-label="Interactive particle reset">
+        <div className="min-w-0">
+          <h3 className="text-xs font-bold text-[#1A1A1B]">A little breathing room</h3>
+          <p className="text-[10px] text-[#1A1A1B]/50 mt-1">Move or tap the dots to let your mind reset.</p>
+        </div>
+        <div className="w-28 h-[94px] sm:w-36 sm:h-[120px] shrink-0 flex items-center justify-center">
+          <Particles shape="Circle" reach={80} force={45} grain="Fine" />
+        </div>
+      </section>
 
       {/* Main 3-Column / Multi-Panel Grid matching the exact FocusMate screenshot */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -203,65 +216,26 @@ export const FocusMateDashboard: React.FC<FocusMateDashboardProps> = ({ onNaviga
               </button>
             </form>
 
-            {/* Task list items */}
-            <div className="space-y-2.5">
-              {todayTasks.length === 0 ? (
+            {/* Real Pulse commitments shown in the physics tower */}
+            <div className="flex justify-center">
+              {towerItems.length === 0 ? (
                 <div className="p-8 text-center text-[#1A1A1B]/40 bg-[#FAF9F6] rounded-2xl border border-dashed border-[#EBE9E0]">
                   <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-[#7C9070]/50" />
                   <p className="text-xs font-semibold">All tasks completed for today!</p>
                   <p className="text-[11px] mt-0.5">Use quick-add above or manage tasks in the Commitments tab.</p>
                 </div>
               ) : (
-                todayTasks.map(task => (
-                  <div
-                    key={task.id}
-                    className="p-3.5 bg-[#FAF9F6] hover:bg-[#F5F1E9] border border-[#EBE9E0] rounded-2xl transition-all flex items-center justify-between gap-3 group"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <button
-                        onClick={() => toggleCommitment(task.id)}
-                        className="text-[#7C9070] hover:scale-110 transition-transform cursor-pointer shrink-0"
-                      >
-                        {task.completed ? (
-                          <CheckCircle2 className="w-5 h-5 fill-[#7C9070] text-white" />
-                        ) : (
-                          <Circle className="w-5 h-5 text-[#1A1A1B]/30 hover:text-[#7C9070]" />
-                        )}
-                      </button>
-
-                      <div className="min-w-0">
-                        <span className={`font-bold text-xs text-[#1A1A1B] block truncate ${task.completed ? 'line-through text-[#1A1A1B]/40' : ''}`}>
-                          {task.title}
-                        </span>
-                        <div className="flex items-center gap-2 text-[10px] text-[#1A1A1B]/50 font-mono mt-0.5">
-                          {task.subject && (
-                            <span className="font-semibold text-[#7C9070] bg-[#7C9070]/10 px-1.5 py-0.2 rounded">
-                              {task.subject}
-                            </span>
-                          )}
-                          <span>{task.estimatedEffort || '1 hr'}</span>
-                          <span>•</span>
-                          <span>Due: {formatDeadlineDisplay(task.dueDate, task.dueTime)}</span>
-                          {!task.completed && isTaskOverdue(task) && (
-                            <span className="text-rose-600 font-bold font-sans">(Overdue)</span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="shrink-0">
-                      <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${
-                        task.priority === 'high' 
-                          ? 'bg-rose-100 text-rose-700' 
-                          : 'bg-emerald-100 text-emerald-700'
-                      }`}>
-                        {task.priority}
-                      </span>
-                    </div>
-                  </div>
-                ))
+                <TodoTower
+                  items={towerItems}
+                  onComplete={(id) => updateCommitment(id, { completed: true, completedAt: new Date().toISOString() })}
+                />
               )}
             </div>
+            {activeCommitments.length > 8 && (
+              <p className="text-center text-[10px] text-[#1A1A1B]/45">
+                Showing 8 of {activeCommitments.length} active tasks. Complete a card to bring the next one into the tower.
+              </p>
+            )}
           </div>
 
           {/* Weekly Productivity Bar Chart Widget */}

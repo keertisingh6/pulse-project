@@ -6,6 +6,7 @@ import {
   Calendar, CheckCircle2, Shield, RefreshCw, Smile, MessageSquareQuote 
 } from 'lucide-react';
 import { motion } from 'motion/react';
+import { EyeTracker } from './bencho/EyeTracker';
 
 const SUGGESTED_QUERIES = [
   "What do I need to finish today?",
@@ -32,6 +33,9 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({
 
   const [inputMessage, setInputMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const sendingRef = useRef(false);
+  const [failedQuery, setFailedQuery] = useState<string | null>(null);
+  const [failedMessageId, setFailedMessageId] = useState<string | null>(null);
   const [messages, setMessages] = useState<AssistantMessage[]>(() => {
     const activeCount = state.commitments.filter(c => !c.completed).length;
     let initialGreeting = `Hello ${displayName}! I am **Kairo**, your personal student companion. `;
@@ -79,7 +83,8 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({
 
   const handleSend = async (textToSend?: string) => {
     const query = (textToSend || inputMessage).trim();
-    if (!query || loading) return;
+    if (!query || sendingRef.current) return;
+    sendingRef.current = true;
 
     const userMsg: AssistantMessage = {
       id: 'u_' + Math.random().toString(36).substring(2, 9),
@@ -91,21 +96,27 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({
     setMessages(prev => [...prev, userMsg]);
     setInputMessage('');
     setLoading(true);
+    setFailedQuery(null);
+    setFailedMessageId(null);
 
     try {
       const response = await askAssistant(query);
       setMessages(prev => [...prev, response]);
-    } catch {
+    } catch (error) {
+      const failureId = 'err_' + Math.random().toString(36).substring(2, 9);
+      setFailedQuery(query);
+      setFailedMessageId(failureId);
       setMessages(prev => [
         ...prev,
         {
-          id: 'err_' + Math.random().toString(36).substring(2, 9),
+          id: failureId,
           sender: 'assistant',
-          text: "I had trouble analyzing that right now. Please verify your connection or ask again.",
+          text: error instanceof Error ? error.message : "I couldn't reach the AI service. Please try again.",
           timestamp: new Date().toISOString(),
         },
       ]);
     } finally {
+      sendingRef.current = false;
       setLoading(false);
     }
   };
@@ -126,8 +137,8 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({
       {/* Header */}
       <div className="bg-white border border-[#EBE9E0] rounded-[2.5rem] p-6 md:p-8 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-[#7C9070] text-white flex items-center justify-center font-serif font-black text-xl shadow-md shadow-[#7C9070]/20">
-            K
+          <div className="w-[72px] h-[72px] flex items-center justify-center shrink-0 overflow-visible">
+            <EyeTracker within="#ai-assistant-page" size={48} shape="Cube" eyes="Dots" follow={55} bounce={28} />
           </div>
           <div>
             <div className="flex items-center gap-2">
@@ -205,6 +216,20 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({
                       })}
                     </div>
                   </div>
+
+                  {msg.id === failedMessageId && failedQuery && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMessages(prev => prev.filter(item => item.id !== failedMessageId));
+                        handleSend(failedQuery);
+                      }}
+                      disabled={loading}
+                      className="text-[11px] font-semibold text-[#7C9070] hover:text-[#5a6a50] disabled:opacity-40 flex items-center gap-1"
+                    >
+                      <RefreshCw className="w-3 h-3" /> Retry
+                    </button>
+                  )}
 
                   {/* Suggested Action Chips */}
                   {msg.suggestedActions && msg.suggestedActions.length > 0 && (

@@ -66,8 +66,8 @@ app.post("/api/gemini/plan-day", handlePlanDay);
 // 5. API endpoint for AI Student Assistant Companion
 app.post("/api/ai/assistant", async (req, res) => {
   const { message, context } = req.body;
-  if (!message) {
-    return res.status(400).json({ error: "Message is required" });
+  if (typeof message !== "string" || !message.trim()) {
+    return res.status(400).json({ error: "Enter a message before sending it." });
   }
 
   try {
@@ -78,8 +78,8 @@ app.post("/api/ai/assistant", async (req, res) => {
     });
     res.json(result);
   } catch (err: any) {
-    console.error("Assistant chat error:", err);
-    res.status(500).json({ error: err.message || "Failed to get AI assistant response" });
+    const message = err instanceof Error ? err.message : "Failed to get an AI assistant response.";
+    res.status(500).json({ error: message });
   }
 });
 

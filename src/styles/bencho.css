@@ -1,0 +1,316 @@
+/* Bencho components (MIT): https://bencho.dev/licence */
+
+/* ══ Eye tracker ═══════════════════════════════════════════
+   See lab/Watcher.tsx. The frame holds the largest ball the
+   Size knob allows, so the wall never rescales it. */
+.eyt {
+  --bg: #FAF9F6;
+  --card: #FFFFFF;
+  --fill-on: #1A1A1B;
+  --fill-slab: #FFFFFF;
+  --font-ui: var(--font-sans);
+  --ink: #1A1A1B;
+  width: calc(var(--eyt-size, 100px) * 1.5);
+  height: calc(var(--eyt-size, 100px) * 1.5);
+  flex: none;
+  display: grid;
+  place-items: center;
+  position: relative;
+  overflow: visible;}
+
+.eyt-ball {
+  width: var(--eyt-size, 100px);
+  height: var(--eyt-size, 100px);
+  overflow: visible;}
+
+/* the ball is the Fill's own slab and the eyes its ink: white
+   with dark eyes on a light fill, near-black with light eyes on
+   a dark one */
+.eyt-body { fill: var(--fill-slab, #ffffff); }
+
+.eyt-eye { fill: var(--fill-on, #0b0b0d); }
+
+/* a press on the toy opens a chat bubble off its lower right: the
+   pet's bubble, its square corner pointing back at the face */
+/* a press gives a little under the finger and springs back out */
+.eyt-ball[data-poke] {
+  cursor: pointer;
+  transform-origin: center;
+  transition: scale 420ms cubic-bezier(0.24, 1.34, 0.38, 1);
+  -webkit-tap-highlight-color: transparent;}
+
+.eyt-ball[data-poke]:active { scale: 0.96; transition-duration: 160ms; transition-timing-function: ease; }
+
+.eyt-say {
+  position: absolute;
+  left: calc(50% + var(--eyt-size, 100px) * 0.36);
+  top: calc(50% + var(--eyt-size, 100px) * 0.3);
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 34px;
+  padding: 0 16px;
+  border-radius: 6px 14px 14px 14px;
+  background: var(--tint, #3b5bff);
+  box-shadow: inset 0 -1.5px 0 rgba(0, 0, 0, 0.1);
+  color: #ffffff;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 400;
+  white-space: nowrap;
+  transform-origin: top left;
+  opacity: 0;
+  scale: 0.85;
+  pointer-events: none;
+  transition: opacity 160ms ease, scale 220ms cubic-bezier(0.24, 1.34, 0.38, 1), background-color 220ms ease;
+  letter-spacing: 0em;}
+
+.eyt-say[data-on] { opacity: 1; scale: 1; }
+
+.eyt-caret {
+  width: 1.5px;
+  height: 13px;
+  border-radius: 1px;
+  background: var(--fill-slab, var(--card));
+  animation: eyt-caret-pulse 1s steps(1) infinite;}
+
+.eyt-ball:focus-visible {
+  outline: 2px solid #7C9070;
+  outline-offset: 5px;
+  border-radius: 50%;}
+
+.eyt-say { z-index: 2; }
+
+@keyframes eyt-caret-pulse {
+  50% { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .eyt-caret { animation: none; }
+  .eyt-ball[data-poke], .eyt-say { transition: none; }
+}
+
+
+/* ══ Particles ═════════════════════════════════════════════
+   lab/Particles.tsx. The dots are drawn on a canvas in the
+   element's own `color`, so the ink is set here and the theme
+   carries it. */
+.ptc {
+  --fill-on: #5E7353;
+  --ink: #1A1A1B;
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  max-width: 480px;}
+
+.ptc-canvas {
+  display: block;
+  max-width: 100%;
+  color: var(--fill-on, var(--ink));
+  cursor: crosshair;
+  touch-action: none;}
+
+.ptc-canvas:focus-visible {
+  outline: 2px solid #7C9070;
+  outline-offset: 3px;
+  border-radius: 8px;}
+
+/* and the tower's bricks, by outline for the same reason the
+   card stack's are: they carry a box-shadow of their own, and
+   a 1px spread shadow in the same declaration would replace it
+   rather than join it. */
+.twr[data-stroke="on"] .twr-card {
+  outline: 1px solid var(--pane-edge);
+  outline-offset: -1px;}
+
+/* ══ Todo tower ═════════════════════════════════════════════
+   A list stacked like bricks, under gravity. The physics is in
+   Tower.tsx — free bodies in a box with a floor, not a column
+   of slots — and what is here is the brick: what a row is made
+   of, how it is pulled out, and the dent a landing puts in it.
+
+   Every position in this block comes from the loop. There is no
+   layout: the cards are absolutely placed by their own
+   coordinates and the DOM order never changes. */
+.twr {
+  --bg: #FAF9F6;
+  --card: #FFFFFF;
+  --fill-on: #5E7353;
+  --fill-slab: #FFFFFF;
+  --focus: #7C9070;
+  --ink: #1A1A1B;
+  --ink-2: #333333;
+  --ink-4: #7A7A7A;
+  --ink-rgb: 26, 26, 27;
+  --on-ink: #FFFFFF;
+  --pane-edge: #EBE9E0;
+  --font-ui: var(--font-sans);
+  background: var(--bg);
+  border-radius: 14px;
+  max-width: 100%;
+  position: relative;
+  -webkit-user-select: none;
+  user-select: none;}
+
+/* the pile is the floor's coordinate frame and nothing else —
+   a card's y is measured up from its bottom edge */
+.twr-pile {
+  position: absolute;
+  inset: 0;
+  list-style: none;
+  margin: 0;
+  padding: 0;}
+
+/* ── the row is the BODY, the card inside it is the thing ──
+   The split is load-bearing. The row's transform is rewritten
+   every frame by the loop — or by the hand, when there is one
+   on it — so nothing in this sheet may touch that property.
+   The card carries everything the loop does not: the dent on
+   landing and the slide out of the block, on `translate`,
+   `rotate` and `scale`, which are their own properties and
+   compose with a transform instead of replacing it.
+
+   Centred on the box, so a card's x of 0 is the middle of the
+   block and the lean is symmetrical about it. */
+.twr-row {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  /* width, height and the centring margin come from the component, which owns the brick size */
+  /* ── a row is something you can pick up ───────────────────
+     Which means the browser must not also try to scroll the
+     page with the same finger. The honest cost: on a touch
+     screen a finger that lands on the pile cannot flick the
+     wall. Every draggable block here makes that trade. */
+  touch-action: none;}
+
+.twr-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 100%;
+  padding: 0 16px;
+  border-radius: 10px;
+  background: var(--fill-slab, var(--card));
+  /* about its own middle, where the row turns it — the slide
+     out of the block rotates with the card, not away from it */
+  transform-origin: 50% 50%;
+  cursor: grab;
+  /* ── FLAT, and the edge is Stroke's to draw ───────────────
+     There were four layers here — two inset highlights and two
+     drop shadows — on the argument that six identical
+     rectangles lying on each other have to stay six, and that
+     light and dark each need their own answer: the shadow in
+     one, the lit rim in the other.
+
+     Both are always present, which is the fault: a card carried
+     its own edge and its own lift whatever the panel said, so
+     Stroke off still drew a hairline of white along every top
+     and a shadow under every card. A switch that cannot turn
+     something off is a switch reporting a state it is not
+     producing — the same fault the tilt card had.
+
+     So the cards are flat, and the only edge on this block is
+     the one `[data-stroke="on"]` draws. What separates them
+     when it is off is the seam of ground between them, which is
+     what a stack of flat cards looks like. */
+  /* the slide out. NOT transform — see the note above. */
+  transition:
+    translate 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    rotate 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 220ms ease 160ms;}
+
+/* ── pulled out of the pile ────────────────────────────────
+   It goes sideways and it goes AFTER the tick, by 90ms — long
+   enough to see the box fill, short enough that it still reads
+   as one gesture. The pile does not wait for it: whatever was
+   resting on it lost its support on the same frame. */
+.twr-row[data-out] .twr-card {
+  translate: 118% 0;
+  rotate: 5deg;
+  opacity: 0;
+  transition-delay: 90ms, 90ms, 150ms;}
+
+/* ── in hand ───────────────────────────────────────────────
+   Off the pile, so it casts what a thing held above a surface
+   casts: further, softer and wider than the tight shadow a
+   brick resting on a brick has. The lift is two pixels and it
+   rides `translate`, because the row's own transform is the
+   pointer's while this is on.
+
+   No hover state anywhere in this block, on purpose. A row
+   that lit up under the cursor would be promising something
+   the row does not do; what it does is come away in your hand,
+   and the cursor says so. */
+.twr-row[data-hand] {
+  z-index: 3;}
+
+.twr-row[data-hand] .twr-card {
+  cursor: grabbing;
+  /* the lift stays and the shadow under it does not — a held
+     card says it is held by being off the pile and by the
+     cursor, which is the whole of what flat leaves it */
+  translate: 0 -2px;}
+
+/* ── the box, and it is deliberately quiet ─────────────────
+   There is a checklist block on this bench and it is about the
+   box: the swell, the tick, the rule drawn through the words.
+   This one is about what happens to everything else, so the
+   box is the smallest thing that can still be pressed. */
+.twr-check {
+  flex: none;
+  width: 19px;
+  height: 19px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px rgba(var(--ink-rgb), 0.22);
+  color: var(--on-ink);
+  cursor: pointer;
+  transition:
+    background-color 160ms ease,
+    box-shadow 160ms ease;}
+
+.twr-check svg {
+  opacity: 0;
+  transition: opacity 160ms ease;}
+
+.twr-check:hover {
+  box-shadow: inset 0 0 0 1.25px rgba(var(--ink-rgb), 0.38);}
+
+.twr-row[data-out] .twr-check {
+  background: var(--fill-on, var(--ink));
+  box-shadow: inset 0 0 0 1.25px var(--fill-on, var(--ink));}
+
+.twr-row[data-out] .twr-check svg { opacity: 1; }
+
+.twr-check:focus-visible {
+  outline: 2px solid var(--focus, #4c8dff);
+  outline-offset: 2px;}
+
+.twr-text {
+  font-size: 16px;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  color: var(--ink-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;}
+
+/* struck through as it leaves, so the row says what happened
+   to it rather than simply disappearing */
+.twr-row[data-out] .twr-text {
+  text-decoration: line-through;
+  color: var(--ink-4);}
+
+@media (prefers-reduced-motion: reduce) {
+  .twr-card { transition-duration: 160ms, 160ms, 160ms; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .twr-check, .twr-check svg { transition-duration: 160ms; }
+}

@@ -68,17 +68,7 @@ Pulse is designed around the following core modules:
    npm install
    ```
 
-4. Configure environment variables:
-
-   ```bash
-   cp .env.example .env
-   ```
-
-   Add your Gemini API key in `.env`:
-
-   ```env
-   GEMINI_API_KEY=your_gemini_api_key_here
-   ```
+4. Copy `.env.example` to `.env` and add your Google AI Studio key as `GEMINI_API_KEY`. Keep the key server-side; do not use a `VITE_` variable.
 
 5. Start the development server:
 
@@ -94,7 +84,7 @@ Create a `.env` file in the root directory (based on `.env.example`):
 
 | Variable | Description |
 |---|---|
-| `GEMINI_API_KEY` | Google Gemini API key used for Kairo AI assistant features |
+| `GEMINI_API_KEY` | Server-side Google Gemini key for Kairo and other Gemini-backed AI features. Set it in the project root `.env` for local development or the server runtime environment in deployment; restart the server after changing it. |
 
 **Important:** Never commit API keys, passwords, or other secrets to GitHub.
 

@@ -429,61 +429,7 @@ Requirements:
     }
 
     if (!this.ai) {
-      // Deterministic intelligent assistant fallback with authentic meme personality
-      const memeEval = evaluateSituationAndSelectMeme({
-        query: message,
-        activeCommitmentsCount: activeCommitments.length,
-        urgentCommitmentsCount: highPriority.length,
-        overdueCount: activeCommitments.filter((c) => c.dueDate && c.dueDate < new Date().toISOString().split("T")[0]).length,
-        totalPlannedHours: activeCommitments.reduce((acc, c) => acc + (c.effortMinutes || 60), 0) / 60,
-        streakDays: context.streakDays || 0,
-        personalityMode,
-        sourceScreen: "chat",
-      });
-
-      const memeLead = memeEval.humorSnippet ? `> *${memeEval.humorSnippet}*\n\n` : "";
-      const q = message.toLowerCase();
-
-      if (q.includes("today") || q.includes("finish")) {
-        const top = activeCommitments.slice(0, 3).map((c) => `• **${c.title}** (Due: ${c.dueDate || 'Today'}, Effort: ${c.estimatedEffort || '1 hour'})`).join("\n");
-        return {
-          reply: `${memeLead}Here is what needs your attention today, ${context.userName}:\n\nYou have **${activeCommitments.length} active commitments**, with **${highPriority.length} marked urgent**.\n\n${top || "All clear for today!"}\n\nWould you like me to schedule a dedicated 45-minute focus session for your top task?`,
-          suggestedActions: [
-            { label: "View Today's Plan", actionType: "navigate", payload: "today" },
-            { label: "Start 25m Timer", actionType: "add_focus", payload: 25 },
-          ],
-        };
-      } else if (q.includes("deadline") || q.includes("next")) {
-        const sorted = [...activeCommitments].sort((a, b) => (a.dueDate > b.dueDate ? 1 : -1));
-        const next = sorted[0];
-        if (next) {
-          return {
-            reply: `${memeLead}Your closest upcoming deadline is **${next.title}** on **${next.dueDate}** (${next.dueTime || "end of day"}). Estimated effort is **${next.estimatedEffort || "approx 1h"}**. ${next.aiTip || ""}`,
-            suggestedActions: [
-              { label: "Open in Calendar", actionType: "navigate", payload: "calendar" },
-            ],
-          };
-        }
-        return { reply: `${memeLead}You don't have any pending deadlines on your radar right now! Clean slate.` };
-      } else if (q.includes("exam") || q.includes("viva")) {
-        const exams = activeCommitments.filter((c) => c.type === "Exam" || (c.subject && c.subject.toLowerCase().includes("exam")));
-        return {
-          reply: exams.length > 0
-            ? `${memeLead}You have **${exams.length} upcoming exam items**:\n\n` +
-              exams.map((e) => `• **${e.title}** (${e.subject || "Exam"}) — Due ${e.dueDate} · ${e.estimatedEffort || "review"} prep`).join("\n")
-            : `${memeLead}No active exams scheduled right now. Great time to stay consistent on weekly coursework!`,
-          suggestedActions: [{ label: "View Goals", actionType: "navigate", payload: "goals" }],
-        };
-      }
-
-      // Default contextual reply
-      return {
-        reply: `${memeLead}Hey ${context.userName}! I'm tracking your **${activeCommitments.length} active commitments** and **${(context.goals || []).length} major goals**. You can ask me to prioritize your day, find upcoming deadlines, or schedule study sprints.`,
-        suggestedActions: [
-          { label: "What should I work on next?", actionType: "filter", payload: "urgent" },
-          { label: "Show today's plan", actionType: "navigate", payload: "today" },
-        ],
-      };
+      throw new Error("Kairo is not configured. Set GEMINI_API_KEY in the server environment and restart Pulse.");
     }
 
     try {
@@ -552,15 +498,16 @@ Respond in JSON format:
       });
 
       const parsed = JSON.parse(response.text || "{}");
+      if (typeof parsed.reply !== "string" || !parsed.reply.trim()) {
+        throw new Error("Gemini returned an invalid assistant response.");
+      }
       return {
-        reply: parsed.reply || "I am here to help guide your commitments.",
-        suggestedActions: parsed.suggestedActions || [],
+        reply: parsed.reply,
+        suggestedActions: Array.isArray(parsed.suggestedActions) ? parsed.suggestedActions : [],
       };
     } catch (err) {
-      console.warn("Assistant chat error:", err);
-      return {
-        reply: `You currently have ${activeCommitments.length} active commitments. Your highest priority item is "${highPriority[0]?.title || "coursework"}". Let's tackle it in steady, calm intervals.`,
-      };
+      console.error("Assistant chat request failed.");
+      throw new Error("Kairo could not get a response from Gemini. Check the server configuration and try again.");
     }
   }
 }
@@ -706,14 +653,18 @@ Return JSON with:
           ],
         }),
       });
+      if (!res.ok) {
+        throw new Error(`Open-source AI endpoint returned HTTP ${res.status}.`);
+      }
       const data = await res.json();
-      return {
-        reply: data.choices?.[0]?.message?.content || "I am ready to assist with your commitments.",
-      };
-    } catch (err: any) {
-      return {
-        reply: `Connected to open-source model endpoint (${this.modelName}). Query: "${input.message}". Keep up your steady momentum!`,
-      };
+      const reply = data.choices?.[0]?.message?.content;
+      if (typeof reply !== "string" || !reply.trim()) {
+        throw new Error("Open-source AI endpoint returned an invalid response.");
+      }
+      return { reply };
+    } catch (err) {
+      console.error("Assistant chat request failed.");
+      throw new Error("Kairo could not get a response from the configured AI endpoint. Check its settings and try again.");
     }
   }
 }
