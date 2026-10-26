@@ -1,5 +1,6 @@
 /* Adapted from Bencho's MIT-licensed Eye tracker (bencho.dev/licence). */
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import type * as React from "react";
 
 /* ══ Eye tracker ═══════════════════════════════════════════
    A ball with two eyes that watches your cursor, wherever it is
@@ -526,3 +527,4 @@ export function EyeTracker({
 }
 
 export const Watcher = EyeTracker;
+
