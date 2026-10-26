@@ -170,6 +170,7 @@ export interface PulseState {
   user: PulseUser | null;
   isAuthenticated: boolean;
   hasEnteredWorkspace?: boolean;
+  demoMode?: boolean;
   profile: StudentProfile;
   commitments: Commitment[];
   goals: Goal[];
