@@ -15,6 +15,22 @@ export const InsightsView: React.FC = () => {
   // Calculate focus minutes
   const totalFocusMinutes = state.focusSessions.reduce((acc, s) => acc + s.durationMinutes, 0);
   const focusHours = (totalFocusMinutes / 60).toFixed(1);
+  const weekStart = new Date();
+  weekStart.setHours(0, 0, 0, 0);
+  weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekEnd.getDate() + 7);
+  const completedThisWeek = state.commitments.filter(item => {
+    if (!item.completedAt) return false;
+    const completedAt = new Date(item.completedAt);
+    return completedAt >= weekStart && completedAt < weekEnd;
+  }).length;
+  const trackedThisWeek = state.commitments.filter(item => {
+    const due = item.dueDate ? new Date(`${item.dueDate}T12:00:00`) : null;
+    const completedAt = item.completedAt ? new Date(item.completedAt) : null;
+    return Boolean((due && due >= weekStart && due < weekEnd) || (completedAt && completedAt >= weekStart && completedAt < weekEnd));
+  }).length;
+  const weeklyCompletionRate = trackedThisWeek ? Math.round(completedThisWeek / trackedThisWeek * 100) : 0;
 
   // Classify categories
   const categoriesCount = state.commitments.reduce((acc: Record<string, number>, c) => {
@@ -57,15 +73,15 @@ export const InsightsView: React.FC = () => {
           </div>
         </div>
 
-        {/* Current streak */}
-        <div className="bg-orange-50/50 border border-orange-100 rounded-3xl p-5 space-y-2 relative overflow-hidden">
-          <div className="bg-orange-100 text-orange-700 w-10 h-10 rounded-2xl flex items-center justify-center shadow-xs">
-            <Award className="w-5 h-5" />
+        {/* Weekly progress without streak pressure */}
+        <div className="bg-purple-50/60 border border-purple-100 rounded-3xl p-5 space-y-2 relative overflow-hidden">
+          <div className="bg-purple-100 text-purple-800 w-10 h-10 rounded-2xl flex items-center justify-center shadow-xs">
+            <Calendar className="w-5 h-5" />
           </div>
           <div>
-            <span className="text-xs font-bold text-orange-700 block uppercase tracking-wide">Active Streak</span>
-            <h4 className="font-display font-bold text-2xl text-slate-800 mt-1">{state.streakDays} days</h4>
-            <p className="text-[11px] text-slate-500 mt-0.5">Consecutive days tracking mindfully</p>
+            <span className="text-xs font-bold text-purple-800 block uppercase tracking-wide">Finished this week</span>
+            <h4 className="font-display font-bold text-2xl text-slate-800 mt-1">{completedThisWeek} items</h4>
+            <p className="text-[11px] text-slate-600 mt-0.5">Every small finish makes room for what’s next.</p>
           </div>
         </div>
       </div>
@@ -80,20 +96,20 @@ export const InsightsView: React.FC = () => {
           
           <div className="space-y-3.5 text-xs md:text-sm text-slate-600 font-medium">
             <p className="leading-relaxed">
-              "{state.user?.name ? `${state.user.name}, take` : 'Take'} a moment to look back. You've cleared <strong className="text-slate-800">{completedCount} major commitments</strong> this cycle. Your largest concentration block was spent on assignments, reducing overall pressure."
+              "{state.user?.name ? `${state.user.name},` : ''} you finished <strong className="text-slate-800">{completedThisWeek} of {trackedThisWeek} items this week</strong>. Progress can be steady without being perfect."
             </p>
             <p className="leading-relaxed">
               {completedBills > 0 ? (
-                <>✔️ <strong>Bill clearance:</strong> You paid {completedBills} outstanding bills. Protecting your credit standing brings calm safety.</>
+                <>✔️ <strong>Nice work:</strong> You cleared {completedBills} bill{completedBills === 1 ? '' : 's'}. That’s one less thing to hold in mind.</>
               ) : (
-                <>⏳ <strong>Bill clearance:</strong> No bills checked off yet. Let's block 5 quick minutes tomorrow morning to audit outstanding accounts.</>
+                <>🌿 <strong>Room to begin:</strong> {pendingCount} item{pendingCount === 1 ? '' : 's'} remain on your list. Choose the one that would feel useful to move forward.</>
               )}
             </p>
             <p className="leading-relaxed">
               {totalFocusMinutes > 0 ? (
-                <>🎯 <strong>Deep Focus:</strong> Your study sessions added up to {totalFocusMinutes} minutes. It takes deep strength to stay still. Well done.</>
+                <>🎯 <strong>Focus time:</strong> Your sessions add up to {totalFocusMinutes} minutes. Thank yourself for the time you made.</>
               ) : (
-                <>⏳ <strong>Deep Focus:</strong> No focus logs recorded today. Whenever you are ready, toggle the Focus Timer to begin your first breathing loop.</>
+                <>🌤 <strong>Focus time:</strong> No sessions logged yet. Start with a short block whenever it feels right.</>
               )}
             </p>
           </div>
@@ -142,8 +158,13 @@ export const InsightsView: React.FC = () => {
             <Heart className="w-3.5 h-3.5 text-rose-400 fill-rose-100" />
             <span>Balance is superior to absolute speed.</span>
           </div>
+          <div className="insights-donut-row" role="img" aria-label={`${weeklyCompletionRate}% of commitments due this week are complete`}>
+            <div className="insights-donut" style={{ '--donut-progress': `${weeklyCompletionRate}%` } as React.CSSProperties}><span>{weeklyCompletionRate}%</span></div>
+            <div><b>This week, at a glance</b><small>{completedThisWeek} of {trackedThisWeek} due or completed items finished</small></div>
+          </div>
         </div>
       </div>
     </div>
   );
 };
+
