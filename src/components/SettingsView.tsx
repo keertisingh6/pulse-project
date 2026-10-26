@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { usePulse } from '../context/PulseContext';
 import { 
   Settings, User, Cpu, Shield, Database, RefreshCw, 
-  Check, AlertCircle, Save, Sparkles, Terminal, Download, Calendar,
+  Check, AlertCircle, Save, Sparkles, Terminal, Download, Calendar, RotateCcw,
 } from 'lucide-react';
 import { downloadICSFile } from '../utils/icsExport';
 import { motion } from 'motion/react';
@@ -10,7 +10,7 @@ import { motion } from 'motion/react';
 export const SettingsView: React.FC = () => {
   const { 
     state, updateProfile, updateUserName, resetAllData, resetAuth, 
-    configureAIProvider 
+    configureAIProvider, loadDemoData, restoreWorkspaceData,
   } = usePulse();
 
   // Profile state
@@ -82,6 +82,31 @@ export const SettingsView: React.FC = () => {
           <Settings className="w-6 h-6" />
         </div>
       </div>
+
+      <section className="demo-data-panel bg-white border border-[#EBE9E0] rounded-[2rem] p-5 md:p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+        <div className="flex items-start gap-3.5">
+          <div className="demo-data-icon w-11 h-11 rounded-2xl flex items-center justify-center shrink-0">
+            <Sparkles className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[9px] uppercase font-bold tracking-[.14em] text-[#7C9070]">Presentation mode</span>
+              {state.demoMode && <span className="demo-data-badge">Demo workspace is active</span>}
+            </div>
+            <h3 className="text-base font-bold text-[#1A1A1B] mt-1">Show Pulse with a complete workspace</h3>
+            <p className="text-[11px] text-[#1A1A1B]/60 max-w-2xl mt-1 leading-relaxed">
+              Load believable coursework, deadlines, goals, a daily plan, and focus history. Your current workspace is saved on this device and can be restored afterward.
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={state.demoMode ? restoreWorkspaceData : loadDemoData}
+          className="demo-data-action shrink-0 inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition-all cursor-pointer"
+        >
+          {state.demoMode ? <><RotateCcw className="w-3.5 h-3.5" /> Restore my workspace</> : <><Sparkles className="w-3.5 h-3.5" /> Load example data</>}
+        </button>
+      </section>
 
       {/* Grid: Student Profile (Left) & AI Provider Abstraction (Right) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
