@@ -88,21 +88,11 @@ export const FocusMateDashboard: React.FC<FocusMateDashboardProps> = ({ onNaviga
   const todayTaskCount = todayPlanItems.length || dueNow.length;
   const plannedMinutesToday = todayPlanItems.reduce((total, item) => total + (item.estimatedMinutes || 0), 0)
     || dueNow.reduce((total, item) => total + (item.effortMinutes || 0), 0);
-  const monday = new Date();
-  monday.setHours(0, 0, 0, 0);
-  monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
-  const localDateKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-  const weeklyFocus = Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(monday);
-    date.setDate(monday.getDate() + index);
-    const key = localDateKey(date);
-    const minutes = state.focusSessions.reduce((total, session) => {
-      const sessionDate = session.completedAt ? localDateKey(new Date(session.completedAt)) : '';
-      return total + (sessionDate === key ? (session.durationMinutes || 0) : 0);
-    }, 0);
-    return { key, minutes, label: date.toLocaleDateString(undefined, { weekday: 'short' }), today: key === todayKey };
-  });
-  const peakFocus = Math.max(35, ...weeklyFocus.map(day => day.minutes));
+  const totalCommitments = state.commitments.length;
+  const completedCommitments = state.commitments.filter(item => item.completed).length;
+  const inProgressCommitments = state.commitments.filter(item => !item.completed && item.status === 'in_progress').length;
+  const pendingCommitments = Math.max(0, totalCommitments - completedCommitments - inProgressCommitments);
+  const completionRate = totalCommitments ? Math.round(completedCommitments / totalCommitments * 100) : 0;
 
   const formatMinutes = (minutes: number) => minutes < 60
     ? `${minutes}m`
@@ -206,17 +196,23 @@ export const FocusMateDashboard: React.FC<FocusMateDashboardProps> = ({ onNaviga
       </section>
 
       <section className="dashboard-focus-overview" aria-label="Today’s focus and quick actions">
-        <button className="dashboard-today-summary" onClick={() => onNavigateToTab('planner')}>
-          <span className="dashboard-summary-icon"><Focus size={18} /></span>
-          <span className="dashboard-summary-copy"><small>TODAY’S FOCUS</small><strong>{todayTaskCount} {todayTaskCount === 1 ? 'task' : 'tasks'} <i>·</i> {formatMinutes(plannedMinutesToday || focusMinutesToday)}</strong><em>{completedToday} completed, at your pace</em></span>
-          <span className="dashboard-summary-progress" aria-label={`${focusProgress}% of focus goal`}><i style={{ '--focus-progress': `${focusProgress}%` } as React.CSSProperties}>{focusProgress}%</i></span>
-          <span className="dashboard-summary-link">My day <ArrowUpRight size={14} /></span>
-        </button>
         <div className="dashboard-quick-actions" aria-label="Quick actions">
           <button className="quick-action-tile quick-action-mint" onClick={() => onNavigateToTab('commitments')}><span><Plus size={17} /></span><b>Add commitment</b><ArrowUpRight size={13} /></button>
           <button className="quick-action-tile quick-action-blush" onClick={() => onNavigateToTab('planner')}><span><CalendarDays size={17} /></span><b>Plan my week</b><ArrowUpRight size={13} /></button>
           <button className="quick-action-tile quick-action-lavender" onClick={() => onNavigateToTab('goals')}><span><Target size={17} /></span><b>Set a goal</b><ArrowUpRight size={13} /></button>
-          <button className="quick-action-tile quick-action-sky" onClick={() => onNavigateToTab('assistant')}><span><Bot size={17} /></span><b>Ask Kairo</b><ArrowUpRight size={13} /></button>
+          <button className="quick-action-tile quick-action-sky" onClick={() => onNavigateToTab('assistant')}><span><Bot size={17} /></span><b>Ask Kairo (AI)</b><ArrowUpRight size={13} /></button>
+        </div>
+        <div className="dashboard-overview-panels">
+          <button className="dashboard-today-summary" onClick={() => onNavigateToTab('planner')}>
+          <span className="dashboard-summary-icon"><Focus size={18} /></span>
+          <span className="dashboard-summary-copy"><small>TODAY’S FOCUS</small><strong>{todayTaskCount} {todayTaskCount === 1 ? 'task' : 'tasks'} <i>·</i> {formatMinutes(plannedMinutesToday || focusMinutesToday)}</strong><em>{completedToday} completed, at your pace</em></span>
+          <span className="dashboard-summary-progress" aria-label={`${focusProgress}% of focus goal`}><i style={{ '--focus-progress': `${focusProgress}%` } as React.CSSProperties}>{focusProgress}%</i></span>
+          <span className="dashboard-summary-link">My day <ArrowUpRight size={14} /></span>
+          </button>
+          <article className="dashboard-weekly-overview" aria-label="Commitment progress this week">
+            <div className="dashboard-weekly-heading"><div><span className="dashboard-section-kicker">WEEKLY PROGRESS</span><h2>Your momentum</h2></div><button onClick={() => onNavigateToTab('insights')}>View all <ArrowUpRight size={13} /></button></div>
+            <div className="dashboard-completion-content"><div className="dashboard-completion-donut" role="img" aria-label={`${completionRate}% of commitments completed`} style={{ '--completion-rate': `${completionRate}%` } as React.CSSProperties}><span>{completionRate}%</span></div><div className="dashboard-completion-legend"><span><i className="legend-completed" /> Completed <b>{completedCommitments}</b></span><span><i className="legend-progress" /> In progress <b>{inProgressCommitments}</b></span><span><i className="legend-pending" /> Pending <b>{pendingCommitments}</b></span></div></div>
+          </article>
         </div>
       </section>
 
@@ -245,11 +241,6 @@ export const FocusMateDashboard: React.FC<FocusMateDashboardProps> = ({ onNaviga
       <section className="dashboard-schedule-strip">
         <div className="dashboard-schedule-heading"><div><span className="dashboard-section-kicker">TODAY, WITH ROOM TO BREATHE</span><h2>Your plan</h2></div><button onClick={() => onNavigateToTab('planner')}>Open planner <ArrowUpRight size={13} /></button></div>
         {state.dailyPlan?.length ? <div className="dashboard-schedule-items">{state.dailyPlan.slice(0, 4).map((item, index) => <article className={'dashboard-schedule-item schedule-tone-' + (index % 4)} key={item.id || item.title}><span className="dashboard-schedule-time">{item.timeSlot}</span><b>{item.title}</b><small>{item.type}</small></article>)}</div> : <div className="dashboard-schedule-empty"><span>No plan blocks yet. A gentle outline can make the day easier to see.</span><button onClick={() => onNavigateToTab('planner')}>Build a day plan <ArrowRight size={13} /></button></div>}
-      </section>
-
-      <section className="dashboard-weekly-overview" aria-label="Weekly focus overview">
-        <div className="dashboard-weekly-heading"><div><span className="dashboard-section-kicker">A GENTLE LOOK BACK</span><h2>Your week in focus</h2><p>A little progress is still progress.</p></div><button onClick={() => onNavigateToTab('insights')}>See insights <ArrowUpRight size={13} /></button></div>
-        <div className="dashboard-week-bars">{weeklyFocus.map(day => <button type="button" className={`dashboard-week-bar ${day.today ? 'is-today' : ''}`} key={day.key} aria-label={`${day.label}: ${day.minutes} focus minutes. Open this day in planner.`} onClick={() => onNavigateToTab('planner', day.key)}><span className="dashboard-week-bar-value">{day.minutes ? formatMinutes(day.minutes) : '—'}</span><span className="dashboard-week-bar-track"><i style={{ height: `${Math.max(8, Math.round(day.minutes / peakFocus * 100))}%` }} /></span><span className="dashboard-week-day">{day.label}</span></button>)}</div>
       </section>
 
       <div className="dashboard-content-grid">
