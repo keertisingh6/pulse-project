@@ -44,6 +44,7 @@ function PulseApp() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
   const [assistantPrefill, setAssistantPrefill] = useState('');
+  const [plannerDate, setPlannerDate] = useState<string | undefined>();
   const { state, logout } = usePulse();
 
   // App Access Check: allow entering Pulse without requiring authentication
@@ -109,7 +110,7 @@ function PulseApp() {
                 className="flex items-center gap-3 cursor-pointer group"
               >
                 <div className="w-9 h-9 rounded-2xl bg-[#5E7353] flex items-center justify-center text-white shadow-md shadow-[#5E7353]/30 font-extrabold text-base relative overflow-hidden">
-                  <span>P</span>
+                  <span aria-hidden="true">✳</span>
                   <span className="absolute bottom-0.5 right-0.5 w-2 h-2 bg-emerald-300 rounded-full border border-[#5E7353] animate-pulse" />
                 </div>
                 <div>
@@ -187,7 +188,7 @@ function PulseApp() {
 
           {/* Bottom user card in sidebar */}
           <div className="pt-4 border-t border-[#EFECE6] space-y-2">
-            <button className="sidebar-weekly-nudge" onClick={() => setActiveTab('planner')}><span className="sidebar-nudge-star">✳</span><span><b>Plan your week</b><small>A little clarity goes a long way.</small></span><ArrowUpRight size={14} /></button>
+            <button className="sidebar-weekly-nudge" onClick={() => setActiveTab('planner')}><span className="sidebar-nudge-star">✳</span><span><b>A gentle reminder</b><small>One thing at a time is enough.</small></span><span className="sidebar-nudge-sprout" aria-hidden="true">🌱</span></button>
             <div className="flex items-center gap-2.5 p-2 bg-[#F6F4EE] rounded-2xl">
               {state.user?.avatar ? (
                 <img
@@ -202,7 +203,7 @@ function PulseApp() {
               )}
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-extrabold text-[#1E2B21] truncate">{displayName}</p>
-                <p className="text-[10px] text-[#5E7353] font-mono truncate">{state.streakDays}d focus streak</p>
+                <p className="text-[10px] text-[#5E7353] font-mono truncate">Your study space</p>
               </div>
               <button
                 onClick={handleLogout}
@@ -287,12 +288,9 @@ function PulseApp() {
               </div>
             </div>
 
-            {/* Quick status & streak */}
+            {/* Search, reminders, and focus access */}
             <div className="flex items-center gap-3">
-              <div className="hidden sm:flex items-center gap-1.5 text-xs font-bold text-[#5E7353] bg-[#E7EFE6] px-3 py-1.5 rounded-full">
-                <Zap className="w-3.5 h-3.5 fill-current" />
-                <span>{state.streakDays} Day Streak</span>
-              </div>
+              <button onClick={() => setActiveTab('reminders')} className="workspace-header-icon" aria-label="Open reminders" title="Reminders"><Bell className="w-4 h-4" /></button>
 
               <button
                 onClick={() => setActiveTab('zen')}
@@ -315,11 +313,11 @@ function PulseApp() {
                 transition={{ duration: 0.18 }}
               >
                 {activeTab === 'dashboard' && (
-                  <FocusMateDashboard onNavigateToTab={(t) => setActiveTab(t)} onAskKairo={(message) => { setAssistantPrefill(message); setActiveTab('assistant'); }} />
+                  <FocusMateDashboard onNavigateToTab={(t, date) => { if (date) setPlannerDate(date); setActiveTab(t as TabType); }} onAskKairo={(message) => { setAssistantPrefill(message); setActiveTab('assistant'); }} />
                 )}
 
                 {activeTab === 'planner' && (
-                  <DailyPlannerView />
+                  <DailyPlannerView initialDate={plannerDate} />
                 )}
 
                 {activeTab === 'database' && (
