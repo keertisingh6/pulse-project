@@ -81,7 +81,7 @@ function ProductPanel() {
 }
 
 export const PulseLandingPage: React.FC = () => {
-  const { continueToPulse, login, loginAsGuest, signup, loading, error, clearError } = usePulse();
+  const { continueToPulse, login, loginAsGuest, signup, loadDemoData, loading, error, clearError } = usePulse();
   const [authOpen, setAuthOpen] = useState(false);
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [name, setName] = useState('');
@@ -126,7 +126,7 @@ export const PulseLandingPage: React.FC = () => {
             <div className="hero-kicker"><span className="blue-dot"/> A softer way to stay on top of things</div>
             <h1>Make room for<br/>the work that <span>matters.</span></h1>
             <p>All the things on your mind, in one calmer place. Pulse helps you find your rhythm between deadlines, deep focus, and being a person.</p>
-            <div className="hero-actions"><button className="button-blue button-large" onClick={() => continueToPulse()}>Find your rhythm <ArrowRight size={17}/></button><a href="#how-it-works" className="text-link">Take a little tour <ArrowDownRight size={15}/></a></div>
+            <div className="hero-actions"><button className="button-blue button-large" onClick={() => continueToPulse()}>Find your rhythm <ArrowRight size={17}/></button><button className="text-link demo-preview-link" onClick={loadDemoData}>Explore with example data <ArrowUpRight size={15}/></button><a href="#how-it-works" className="text-link landing-tour-link">Take a little tour <ArrowDownRight size={15}/></a></div>
             <div className="hero-note"><span className="mini-avatars"><i>J</i><i>M</i><i>A</i></span><span>A quieter corner of your busy day.</span></div>
           </motion.div>
           <div className="hero-products" aria-label="Pulse app previews">
