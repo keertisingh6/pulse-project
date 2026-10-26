@@ -1,459 +1,313 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { usePulse } from '../context/PulseContext';
-import { 
-  Plus, Check, CheckCircle2, ChevronRight, 
-  Sparkles, Trophy, BookOpen, Clock, Flame, 
-  RotateCcw, Shield, Award, ArrowUpRight, BarChart3,
-  Calendar, Coffee, MoreHorizontal, Play, Pause, Edit2
+import {
+  ArrowRight, ArrowUpRight, Bot, CalendarDays, Check, CheckCircle2,
+  BookOpen, Flame, Focus, Layers, List, Pause, Play, Plus, RotateCcw, Sparkles,
+  Target, Timer, WandSparkles,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
 import { getLocalTodayDateString } from '../utils/deadlineUtils';
 import { TodoTower } from './bencho/TodoTower';
 import { Particles } from './bencho/Particles';
+import type { Commitment } from '../types';
 
 interface FocusMateDashboardProps {
-  onNavigateToTab: (tab: any) => void;
+  onNavigateToTab: (tab: string) => void;
+  onAskKairo: (message: string) => void;
 }
 
-export const FocusMateDashboard: React.FC<FocusMateDashboardProps> = ({ onNavigateToTab }) => {
-  const { state, updateCommitment, addCommitment, addFocusSession } = usePulse();
-  const displayName = state.user?.name || state.userName || 'Keerti';
+const priorityRank: Record<Commitment['priority'], number> = { high: 0, medium: 1, low: 2 };
 
-  // Quick task input state
-  const [quickTaskText, setQuickTaskText] = useState('');
-  const [quickTaskSubject, setQuickTaskSubject] = useState('Math');
+const formatDueDate = (date: string) => {
+  if (!date) return 'No due date';
+  const today = getLocalTodayDateString();
+  if (date === today) return 'Today';
+  const parsed = new Date(date + 'T12:00:00');
+  if (Number.isNaN(parsed.getTime())) return 'Date to confirm';
+  return parsed.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+};
 
-  // Focus Timer Name Customization
-  const [timerName, setTimerName] = useState(() => {
-    return localStorage.getItem('pulse_timer_name') || 'Focus Timer';
-  });
-  const [isEditingTimerName, setIsEditingTimerName] = useState(false);
-  const [tempTimerName, setTempTimerName] = useState(timerName);
+const daysUntil = (date: string) => {
+  if (!date) return null;
+  const due = new Date(date + 'T00:00:00');
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  if (Number.isNaN(due.getTime())) return null;
+  return Math.ceil((due.getTime() - today.getTime()) / 86_400_000);
+};
 
-  const handleSaveTimerName = () => {
-    const nameToSave = tempTimerName.trim() || 'Focus Timer';
-    setTimerName(nameToSave);
-    localStorage.setItem('pulse_timer_name', nameToSave);
-    setIsEditingTimerName(false);
-  };
+const formatTime = (seconds: number) => {
+  const hours = Math.floor(seconds / 3600).toString().padStart(2, '0');
+  const minutes = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+  const remaining = (seconds % 60).toString().padStart(2, '0');
+  return hours + ':' + minutes + ':' + remaining;
+};
 
-  // Mini Stopwatch State inside Dashboard Widget
+export const FocusMateDashboard: React.FC<FocusMateDashboardProps> = ({ onNavigateToTab, onAskKairo }) => {
+  const { state, addCommitment, toggleCommitment, addFocusSession } = usePulse();
+  const displayName = state.user?.name || state.userName || 'Student';
+  const todayKey = getLocalTodayDateString();
+  const todayDate = new Date();
+  const firstName = displayName.trim().split(/\s+/)[0] || 'there';
+  const [quickTask, setQuickTask] = useState('');
+  const [kairoQuestion, setKairoQuestion] = useState('');
   const [timerActive, setTimerActive] = useState(false);
   const [timerSeconds, setTimerSeconds] = useState(0);
+  const [taskView, setTaskView] = useState<'list' | 'stack'>('list');
+  const [focusTaskId, setFocusTaskId] = useState<string | undefined>();
 
-  // Mini Calendar State
-  const today = new Date();
-  const [calMonth, setCalMonth] = useState(today.getMonth());
-  const [calYear, setCalYear] = useState(today.getFullYear());
-  const [selectedDay, setSelectedDay] = useState(today.getDate());
-
-  // Interactive stopwatch ticker
-  React.useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
-    if (timerActive) {
-      interval = setInterval(() => {
-        setTimerSeconds(prev => prev + 1);
-      }, 1000);
-    }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
+  useEffect(() => {
+    if (!timerActive) return;
+    const interval = window.setInterval(() => setTimerSeconds(value => value + 1), 1000);
+    return () => window.clearInterval(interval);
   }, [timerActive]);
 
-  const handleQuickTaskSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!quickTaskText.trim()) return;
+  const activeCommitments = useMemo(() => state.commitments
+    .filter(item => !item.completed)
+    .sort((a, b) => {
+      const dateCompare = (a.dueDate || '9999-12-31').localeCompare(b.dueDate || '9999-12-31');
+      return dateCompare || priorityRank[a.priority] - priorityRank[b.priority];
+    }), [state.commitments]);
 
+  const dueNow = activeCommitments.filter(item => item.dueDate && item.dueDate <= todayKey);
+  const upcoming = activeCommitments.filter(item => !item.dueDate || item.dueDate > todayKey).slice(0, 4);
+  const recommendedTask = activeCommitments[0];
+  const activeGoal = state.goals.find(goal => goal.progressPercentage < 100);
+  const subjectStats = (Object.values(state.commitments.reduce<Record<string, { name: string; total: number; done: number }>>((groups, item) => {
+    const name = item.subject || 'General';
+    const group = groups[name] || (groups[name] = { name, total: 0, done: 0 });
+    group.total += 1;
+    if (item.completed) group.done += 1;
+    return groups;
+  }, {})) as Array<{ name: string; total: number; done: number }>).slice(0, 4);
+  const completedToday = state.commitments.filter(item => item.completed && item.completedAt?.slice(0, 10) === todayKey).length;
+  const focusMinutesToday = state.focusSessions
+    .filter(item => item.completedAt?.slice(0, 10) === todayKey)
+    .reduce((total, item) => total + (item.durationMinutes || 0), 0);
+  const focusProgress = Math.min(100, Math.round((focusMinutesToday / 180) * 100));
+
+  const startNextTask = () => {
+    setFocusTaskId(recommendedTask?.id);
+    setTimerActive(true);
+    onNavigateToTab('dashboard');
+  };
+
+  const handleQuickAdd = (event: React.FormEvent) => {
+    event.preventDefault();
+    const title = quickTask.trim();
+    if (!title) return;
     addCommitment({
-      title: quickTaskText.trim(),
-      subject: quickTaskSubject,
+      title,
+      subject: 'Personal',
       type: 'Task',
-      dueDate: getLocalTodayDateString(),
-      estimatedEffort: '45 mins',
-      effortMinutes: 45,
+      dueDate: todayKey,
+      dueTime: '',
+      estimatedEffort: '30 min',
+      effortMinutes: 30,
       priority: 'medium',
       completed: false,
       source: 'manual',
     });
-
-    setQuickTaskText('');
+    setQuickTask('');
   };
 
-  const timerHrs = Math.floor(timerSeconds / 3600);
-  const timerMin = Math.floor((timerSeconds % 3600) / 60);
-  const timerSec = timerSeconds % 60;
-
-  // Mini calendar calculation
-  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
-  const firstDayIndex = (new Date(calYear, calMonth, 1).getDay() + 6) % 7; // Monday start
-  const monthName = new Date(calYear, calMonth, 1).toLocaleString('en-US', { month: 'short' });
-
-  // Weekly productivity mockup bars based on user state
-  const weeklyStats = [
-    { day: 'Mon', hours: 4.5, fill: 'bg-emerald-400' },
-    { day: 'Tue', hours: 6.2, fill: 'bg-emerald-400' },
-    { day: 'Wed', hours: 5.0, fill: 'bg-emerald-400' },
-    { day: 'Thu', hours: 7.5, fill: 'bg-emerald-500' },
-    { day: 'Fri', hours: 3.8, fill: 'bg-emerald-400' },
-    { day: 'Sat', hours: 5.5, fill: 'bg-emerald-400' },
-    { day: 'Sun', hours: 4.0, fill: 'bg-emerald-300' },
-  ];
-
-  const activeCommitments = state.commitments.filter(c => !c.completed);
-  const towerItems = activeCommitments.slice(0, 8).map(({ id, title }) => ({ id, title }));
+  const finishTimer = () => {
+    setTimerActive(false);
+    if (timerSeconds >= 3) {
+      const endTime = new Date().toISOString();
+      const startTime = new Date(Date.now() - timerSeconds * 1000).toISOString();
+      addFocusSession({
+        durationMinutes: Math.max(1, Math.round(timerSeconds / 60)),
+        durationSeconds: timerSeconds,
+        startTime,
+        endTime,
+        commitmentId: focusTaskId,
+        type: 'study',
+        notes: recommendedTask?.id === focusTaskId ? recommendedTask.title : 'Focus session',
+      });
+    }
+    setTimerSeconds(0);
+  };
 
   return (
-    <div className="space-y-6">
-
-      {/* Top Hero Banner matching FocusMate: Mint / Sunset soft aesthetic */}
-      <div className="relative rounded-[2rem] bg-gradient-to-r from-[#E7F0E8] via-[#F4F6F2] to-[#FAF8F2] border border-[#E0E7DC] p-6 md:p-8 overflow-hidden shadow-xs">
-        
-        {/* Soft background nature hills SVG graphic */}
-        <div className="absolute right-0 bottom-0 top-0 w-80 md:w-96 pointer-events-none opacity-40">
-          <svg viewBox="0 0 400 200" fill="none" className="w-full h-full object-cover">
-            <path d="M0 200C100 120 250 160 400 100V200H0Z" fill="#7C9070" fillOpacity="0.2" />
-            <path d="M120 200C220 140 320 180 400 130V200H120Z" fill="#5F7553" fillOpacity="0.15" />
-            <circle cx="320" cy="60" r="32" fill="#E8B896" fillOpacity="0.3" />
-          </svg>
-        </div>
-
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-2 max-w-xl">
-            <div className="inline-flex items-center gap-2 bg-[#7C9070]/15 text-[#586A4F] px-3 py-1 rounded-full text-xs font-bold font-mono">
-              <Sparkles className="w-3.5 h-3.5 text-[#7C9070]" />
-              <span>PULSE ACADEMIC OS • STUDY IN PROGRESS</span>
-            </div>
-            
-            <h2 className="text-2xl md:text-3xl font-extrabold text-[#1F2B22] tracking-tight">
-              Welcome back, {displayName}!
-            </h2>
-            
-            <p className="text-xs md:text-sm text-[#3E4E42] leading-relaxed">
-              You're currently in deep study mode. You have <strong className="text-[#1F2B22]">{activeCommitments.length} pending academic commitments</strong> today. Focus and take mindful breathers!
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3 shrink-0">
-            <button
-              onClick={() => onNavigateToTab('zen')}
-              className="px-5 py-3 rounded-2xl bg-[#5E7353] hover:bg-[#506246] text-white font-bold text-xs shadow-md shadow-[#5E7353]/20 flex items-center gap-2 transition-all cursor-pointer hover:scale-[1.02]"
-            >
-              <Shield className="w-4 h-4" />
-              <span>Enter Focus Studio</span>
-            </button>
-
-            <button
-              onClick={() => onNavigateToTab('commitments')}
-              className="px-4 py-3 rounded-2xl bg-white hover:bg-slate-50 text-[#1F2B22] border border-[#D5DFD1] font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
-            >
-              <Plus className="w-4 h-4 text-[#5E7353]" />
-              <span>Add Commitment</span>
-            </button>
+    <div className="dashboard-page">
+      <section className="dashboard-hero">
+        <div className="dashboard-hero-copy">
+          <div className="dashboard-eyebrow"><span className="dashboard-live-dot" /> YOUR SPACE, IN RHYTHM</div>
+          <h1>Good {todayDate.getHours() < 12 ? 'morning' : todayDate.getHours() < 17 ? 'afternoon' : 'evening'}, {firstName}.</h1>
+          <p>{dueNow.length > 0
+            ? 'You have ' + dueNow.length + ' commitment' + (dueNow.length === 1 ? '' : 's') + ' to tend to today. Let’s find a good place to begin.'
+            : activeCommitments.length > 0
+              ? 'Your next commitment is ' + formatDueDate(activeCommitments[0].dueDate) + '. Keep the day spacious and take one step at a time.'
+              : 'Your list is clear. Take a breath, or add a small intention for the day.'}</p>
+          <div className="dashboard-hero-actions">
+            <button className="dashboard-primary-action" onClick={startNextTask}><Play size={15} /> Start my next task <ArrowRight size={15} /></button>
+            <button className="dashboard-secondary-action" onClick={() => onNavigateToTab('planner')}>View today’s plan <ArrowUpRight size={15} /></button>
           </div>
         </div>
-      </div>
-
-      {/* A small interactive reset, kept secondary to tasks and focus controls. */}
-      <section className="bg-white border border-[#EBE9E0] rounded-[2rem] px-5 py-3 shadow-sm flex items-center justify-between gap-4 overflow-hidden" aria-label="Interactive particle reset">
-        <div className="min-w-0">
-          <h3 className="text-xs font-bold text-[#1A1A1B]">A little breathing room</h3>
-          <p className="text-[10px] text-[#1A1A1B]/50 mt-1">Move or tap the dots to let your mind reset.</p>
+        <div className="dashboard-sky-art" aria-hidden="true">
+          <span className="dashboard-sun" />
+          <span className="dashboard-cloud cloud-left" />
+          <span className="dashboard-cloud cloud-right" />
+          <span className="dashboard-sky-label">A LITTLE MORE<br />ROOM TO BREATHE</span>
+          <div className="dashboard-illustration" aria-hidden="true">
+            <svg viewBox="0 0 180 190" role="presentation">
+              <ellipse cx="90" cy="174" rx="57" ry="10" fill="#8773b8" opacity=".12" />
+              <path d="M42 164c5-35 20-52 48-52s44 17 48 52c-16 12-80 12-96 0Z" fill="#b7a2e6" />
+              <path d="M65 113c5 13 14 20 25 20s20-7 25-20l-8-14H73l-8 14Z" fill="#efc8ae" />
+              <ellipse cx="90" cy="72" rx="40" ry="47" fill="#f1cdb5" />
+              <path d="M51 75c-6-36 12-59 40-59 29 0 45 21 39 57-7-2-12-9-16-21-18 10-39 12-59 9l-4 14Z" fill="#493b5d" />
+              <path d="M60 77c0 25 12 43 30 43s30-18 30-43" fill="#f1cdb5" />
+              <circle cx="76" cy="80" r="2.5" fill="#493b5d" /><circle cx="104" cy="80" r="2.5" fill="#493b5d" />
+              <path d="M82 96c5 5 11 5 16 0" fill="none" stroke="#ba7777" strokeWidth="2.4" strokeLinecap="round" />
+              <circle cx="63" cy="88" r="7" fill="#e8a99d" opacity=".45" /><circle cx="117" cy="88" r="7" fill="#e8a99d" opacity=".45" />
+              <path d="M43 150c-16-8-19-22-8-31 11-8 22 1 31 12" fill="#f1cdb5" />
+              <path d="M137 151c16-8 19-22 8-31-11-8-22 1-31 12" fill="#f1cdb5" />
+              <path d="M76 119c-2 11 4 19 14 19s16-8 14-19" fill="#fffaf7" />
+            </svg>
+            <div className="dashboard-plant"><i /><i /><i /><span /></div>
+          </div>
+          <div className="dashboard-glass-note"><span className="dashboard-note-mark"><WandSparkles size={15} /></span><span><b>Small steps count.</b><small>Make today feel doable.</small></span></div>
         </div>
-        <div className="w-28 h-[94px] sm:w-36 sm:h-[120px] shrink-0 flex items-center justify-center">
-          <Particles shape="Circle" reach={80} force={45} grain="Fine" />
-        </div>
+        <div className="dashboard-particles" aria-hidden="true"><Particles shape="Circle" reach={55} force={26} grain="Fine" /></div>
+        <div className="dashboard-hero-grain" aria-hidden="true" />
       </section>
 
-      {/* Main 3-Column / Multi-Panel Grid matching the exact FocusMate screenshot */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
-        {/* LEFT COLUMN: Tasks & Quick Add (7 Cols) */}
-        <div className="lg:col-span-7 space-y-6">
-          
-          {/* Today's Tasks Widget */}
-          <div className="bg-white border border-[#EBE9E0] rounded-[2rem] p-6 shadow-sm space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-[#EBE9E0]">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-xl bg-[#7C9070]/15 text-[#7C9070] flex items-center justify-center font-bold">
-                  <Check className="w-4 h-4" />
-                </div>
-                <h3 className="font-bold text-base text-[#1A1A1B]">Today's Priorities</h3>
-              </div>
+      <section className="dashboard-metrics" aria-label="Your progress">
+        <article className="dashboard-metric-card">
+          <span className="dashboard-metric-icon"><Focus size={17} /></span>
+          <span className="dashboard-metric-label">FOCUS TODAY</span>
+          <strong>{focusMinutesToday < 60 ? focusMinutesToday + 'm' : Math.floor(focusMinutesToday / 60) + 'h ' + (focusMinutesToday % 60) + 'm'}</strong>
+          <div className="dashboard-progress-track"><span style={{ width: focusProgress + '%' }} /></div>
+        </article>
+        <article className="dashboard-metric-card">
+          <span className="dashboard-metric-icon"><CheckCircle2 size={17} /></span>
+          <span className="dashboard-metric-label">TASKS COMPLETED</span>
+          <strong>{completedToday}</strong>
+          <small>small steps, all yours</small>
+        </article>
+        <article className="dashboard-metric-card">
+          <span className="dashboard-metric-icon"><Target size={17} /></span>
+          <span className="dashboard-metric-label">ACTIVE GOALS</span>
+          <strong>{state.goals.filter(goal => goal.progressPercentage < 100).length}</strong>
+          <small>room to grow at your pace</small>
+        </article>
+        <article className="dashboard-metric-card">
+          <span className="dashboard-metric-icon"><Flame size={17} /></span>
+          <span className="dashboard-metric-label">YOUR RHYTHM</span>
+          <strong>{state.streakDays} {state.streakDays === 1 ? 'day' : 'days'}</strong>
+          <small>{state.streakDays > 0 ? 'in a row, at your pace' : 'begin whenever you’re ready'}</small>
+        </article>
+      </section>
 
-              <button
-                onClick={() => onNavigateToTab('database')}
-                className="text-xs font-semibold text-[#7C9070] hover:underline flex items-center gap-1 cursor-pointer"
-              >
-                <span>View Full Database</span>
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            {/* Quick Add Form */}
-            <form onSubmit={handleQuickTaskSubmit} className="flex items-center gap-2">
-              <input
-                type="text"
-                placeholder="Quick-add task or assignment..."
-                value={quickTaskText}
-                onChange={(e) => setQuickTaskText(e.target.value)}
-                className="flex-1 px-4 py-2.5 bg-[#FAF9F6] border border-[#EBE9E0] rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[#7C9070]"
-              />
-              <select
-                value={quickTaskSubject}
-                onChange={(e) => setQuickTaskSubject(e.target.value)}
-                className="px-3 py-2.5 bg-[#FAF9F6] border border-[#EBE9E0] rounded-xl text-xs font-semibold text-[#1A1A1B]/70 focus:outline-none"
-              >
-                <option value="Math">Math</option>
-                <option value="CS">CS</option>
-                <option value="Physics">Physics</option>
-                <option value="General">General</option>
-              </select>
-              <button
-                type="submit"
-                className="p-2.5 bg-[#7C9070] hover:bg-[#6c7d61] text-white rounded-xl shadow-xs transition-colors cursor-pointer"
-              >
-                <Plus className="w-4 h-4" />
-              </button>
-            </form>
-
-            {/* Real Pulse commitments shown in the physics tower */}
-            <div className="flex justify-center">
-              {towerItems.length === 0 ? (
-                <div className="p-8 text-center text-[#1A1A1B]/40 bg-[#FAF9F6] rounded-2xl border border-dashed border-[#EBE9E0]">
-                  <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-[#7C9070]/50" />
-                  <p className="text-xs font-semibold">All tasks completed for today!</p>
-                  <p className="text-[11px] mt-0.5">Use quick-add above or manage tasks in the Commitments tab.</p>
-                </div>
-              ) : (
-                <TodoTower
-                  items={towerItems}
-                  onComplete={(id) => updateCommitment(id, { completed: true, completedAt: new Date().toISOString() })}
-                />
-              )}
-            </div>
-            {activeCommitments.length > 8 && (
-              <p className="text-center text-[10px] text-[#1A1A1B]/45">
-                Showing 8 of {activeCommitments.length} active tasks. Complete a card to bring the next one into the tower.
-              </p>
-            )}
+      <section className="dashboard-next-action">
+        <div className="dashboard-next-copy">
+          <span className="dashboard-section-kicker"><span className="dashboard-live-dot" /> RECOMMENDED NEXT ACTION</span>
+          <h2>{recommendedTask?.title || 'Choose one small thing to begin.'}</h2>
+          <p>{recommendedTask ? (recommendedTask.subject || recommendedTask.type) + ' · ' + (recommendedTask.estimatedEffort || 'A little at a time') : 'Your space is clear for now. Add a task or ask Kairo to help plan your day.'}</p>
+          <div className="dashboard-next-meta">
+            {recommendedTask && <span><CalendarDays size={13} /> {formatDueDate(recommendedTask.dueDate)}{recommendedTask.dueTime ? ' · ' + recommendedTask.dueTime : ''}</span>}
+            {recommendedTask && <span className={'dashboard-priority priority-' + recommendedTask.priority}>{recommendedTask.priority} priority</span>}
+            {recommendedTask && <span>{recommendedTask.effortMinutes ? recommendedTask.effortMinutes + ' min' : recommendedTask.estimatedEffort}</span>}
           </div>
-
-          {/* Weekly Productivity Bar Chart Widget */}
-          <div className="bg-white border border-[#EBE9E0] rounded-[2rem] p-6 shadow-sm space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-[#EBE9E0]">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
-                  <BarChart3 className="w-4 h-4" />
-                </div>
-                <h3 className="font-bold text-base text-[#1A1A1B]">Weekly Focus Hours</h3>
-              </div>
-              <span className="text-xs font-mono font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full">
-                36.5 hrs total
-              </span>
-            </div>
-
-            <div className="flex items-end justify-between gap-3 h-36 pt-4 px-2">
-              {weeklyStats.map(stat => {
-                const heightPercent = (stat.hours / 8) * 100;
-                return (
-                  <div key={stat.day} className="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
-                    <span className="text-[10px] font-mono font-bold text-[#1A1A1B]/60 opacity-0 group-hover:opacity-100 transition-opacity">
-                      {stat.hours}h
-                    </span>
-                    <div className="w-full bg-slate-100 rounded-xl overflow-hidden h-24 flex items-end">
-                      <div 
-                        className={`w-full rounded-xl transition-all duration-500 ${stat.fill}`}
-                        style={{ height: `${heightPercent}%` }}
-                      />
-                    </div>
-                    <span className="text-[11px] font-bold text-[#1A1A1B]/70">{stat.day}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
         </div>
-
-        {/* RIGHT COLUMN: Pomodoro, Mini Calendar & App Blocker (5 Cols) */}
-        <div className="lg:col-span-5 space-y-6">
-          
-          {/* Focus Timer Widget matching FocusMate */}
-          <div className="bg-gradient-to-br from-[#EEF4ED] to-[#E2EBE0] border border-[#D5DFD1] rounded-[2rem] p-6 shadow-sm space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5">
-                {isEditingTimerName ? (
-                  <div className="flex items-center gap-1">
-                    <input
-                      type="text"
-                      value={tempTimerName}
-                      onChange={(e) => setTempTimerName(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleSaveTimerName();
-                        if (e.key === 'Escape') setIsEditingTimerName(false);
-                      }}
-                      autoFocus
-                      className="text-[11px] font-bold uppercase tracking-wider text-[#4E6246] bg-white/90 border border-[#4E6246]/30 rounded px-1.5 py-0.5 outline-none w-36"
-                    />
-                    <button
-                      onClick={handleSaveTimerName}
-                      className="p-1 text-[#4E6246] hover:bg-white/60 rounded cursor-pointer"
-                      title="Save name"
-                    >
-                      <Check className="w-3 h-3" />
-                    </button>
-                  </div>
-                ) : (
-                  <div 
-                    onClick={() => {
-                      setTempTimerName(timerName);
-                      setIsEditingTimerName(true);
-                    }}
-                    className="flex items-center gap-1.5 group cursor-pointer"
-                    title="Click to rename timer"
-                  >
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#4E6246]">
-                      {timerName}
-                    </span>
-                    <Edit2 className="w-2.5 h-2.5 text-[#4E6246]/50 group-hover:text-[#4E6246] transition-colors" />
-                  </div>
-                )}
-              </div>
-              <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-[#4E6246] bg-white/70 px-2 py-0.5 rounded-full">
-                <Clock className="w-3.5 h-3.5" />
-                <span>Stopwatch</span>
-              </div>
-            </div>
-
-            <div className="flex flex-col items-center justify-center py-2 text-center">
-              <div className="text-4xl sm:text-5xl font-mono font-extrabold text-[#243322] tracking-tight">
-                {String(timerHrs).padStart(2, '0')}:{String(timerMin).padStart(2, '0')}:{String(timerSec).padStart(2, '0')}
-              </div>
-              <p className="text-xs text-[#4E6246] mt-1 font-medium">
-                {timerActive ? 'Active study session in progress' : 'Ready to start study stopwatch'}
-              </p>
-            </div>
-
-            <div className="flex items-center justify-center gap-3">
-              <button
-                onClick={() => {
-                  setTimerActive(false);
-                  setTimerSeconds(0);
-                }}
-                className="p-2.5 rounded-xl bg-white/80 hover:bg-white text-slate-700 transition-colors cursor-pointer"
-                title="Reset"
-              >
-                <RotateCcw className="w-4 h-4" />
-              </button>
-
-              <button
-                onClick={() => setTimerActive(!timerActive)}
-                className={`px-6 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 shadow-sm transition-all cursor-pointer ${
-                  timerActive 
-                    ? 'bg-amber-600 hover:bg-amber-700 text-white' 
-                    : 'bg-[#506346] hover:bg-[#43533a] text-white'
-                }`}
-              >
-                {timerActive ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" />}
-                <span>{timerActive ? 'Pause' : 'Start Focus'}</span>
-              </button>
-
-              <button
-                onClick={() => onNavigateToTab('zen')}
-                className="p-2.5 rounded-xl bg-white/80 hover:bg-white text-[#4E6246] transition-colors cursor-pointer"
-                title="Launch Focus Studio"
-              >
-                <Shield className="w-4 h-4" />
-              </button>
-            </div>
+        <div className="dashboard-next-timer">
+          <div className="dashboard-next-clock"><span>{formatTime(timerSeconds)}</span><small>{timerActive ? 'Focus is underway' : 'Start when you’re ready'}</small></div>
+          <div className="dashboard-timer-controls">
+            <button className="dashboard-reset-button" onClick={() => { setTimerActive(false); setTimerSeconds(0); }} aria-label="Reset focus timer"><RotateCcw size={15} /></button>
+            <button className="dashboard-timer-button" onClick={() => { setFocusTaskId(recommendedTask?.id); setTimerActive(value => !value); }}>{timerActive ? <><Pause size={15} /> Pause</> : <><Play size={15} /> Start focus</>}</button>
+            {!timerActive && timerSeconds > 0 && <button className="dashboard-save-button" onClick={finishTimer}>Save</button>}
           </div>
-
-          {/* Mini Calendar Widget */}
-          <div className="bg-white border border-[#EBE9E0] rounded-[2rem] p-6 shadow-sm space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-[#EBE9E0]">
-              <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-[#7C9070]" />
-                <h3 className="font-bold text-sm text-[#1A1A1B]">
-                  {monthName} {calYear}
-                </h3>
-              </div>
-              <button
-                onClick={() => onNavigateToTab('calendar')}
-                className="text-xs text-[#7C9070] font-semibold hover:underline"
-              >
-                Full Calendar
-              </button>
-            </div>
-
-            {/* Days Grid */}
-            <div className="grid grid-cols-7 gap-1 text-center text-xs font-mono">
-              {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => (
-                <div key={i} className="text-[#1A1A1B]/40 font-bold py-1">{d}</div>
-              ))}
-              
-              {Array.from({ length: firstDayIndex }).map((_, i) => (
-                <div key={`empty-${i}`} className="py-1" />
-              ))}
-
-              {Array.from({ length: daysInMonth }).map((_, i) => {
-                const day = i + 1;
-                const isSelected = day === selectedDay;
-                const isToday = day === today.getDate() && calMonth === today.getMonth();
-
-                return (
-                  <button
-                    key={day}
-                    onClick={() => setSelectedDay(day)}
-                    className={`py-1.5 rounded-xl transition-all cursor-pointer font-medium ${
-                      isSelected
-                        ? 'bg-[#7C9070] text-white font-bold shadow-xs'
-                        : isToday
-                        ? 'bg-[#7C9070]/15 text-[#7C9070] font-bold'
-                        : 'text-[#1A1A1B]/70 hover:bg-[#FAF9F6]'
-                    }`}
-                  >
-                    {day}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Block List Quick Widget matching FocusMate */}
-          <div className="bg-white border border-[#EBE9E0] rounded-[2rem] p-6 shadow-sm space-y-3">
-            <div className="flex items-center justify-between pb-2 border-b border-[#EBE9E0]">
-              <div className="flex items-center gap-2">
-                <Shield className="w-4 h-4 text-rose-500" />
-                <h3 className="font-bold text-sm text-[#1A1A1B]">Distraction Blocker</h3>
-              </div>
-              <button
-                onClick={() => onNavigateToTab('blocklist')}
-                className="text-xs text-[#7C9070] font-semibold hover:underline"
-              >
-                Manage
-              </button>
-            </div>
-
-            <div className="grid grid-cols-3 gap-2">
-              <div className="p-2.5 rounded-xl bg-rose-50/60 border border-rose-100 text-center">
-                <span className="text-[10px] font-bold text-rose-700 block">Instagram</span>
-                <span className="text-[9px] font-mono text-rose-600/70">Blocked</span>
-              </div>
-              <div className="p-2.5 rounded-xl bg-rose-50/60 border border-rose-100 text-center">
-                <span className="text-[10px] font-bold text-rose-700 block">YouTube</span>
-                <span className="text-[9px] font-mono text-rose-600/70">Blocked</span>
-              </div>
-              <div className="p-2.5 rounded-xl bg-rose-50/60 border border-rose-100 text-center">
-                <span className="text-[10px] font-bold text-rose-700 block">TikTok</span>
-                <span className="text-[9px] font-mono text-rose-600/70">Blocked</span>
-              </div>
-            </div>
-          </div>
-
         </div>
+        <div className="dashboard-next-glow" aria-hidden="true" />
+      </section>
 
+      <section className="dashboard-schedule-strip">
+        <div className="dashboard-schedule-heading"><div><span className="dashboard-section-kicker">TODAY, WITH ROOM TO BREATHE</span><h2>Your plan</h2></div><button onClick={() => onNavigateToTab('planner')}>Open planner <ArrowUpRight size={13} /></button></div>
+        {state.dailyPlan?.length ? <div className="dashboard-schedule-items">{state.dailyPlan.slice(0, 4).map((item, index) => <article className={'dashboard-schedule-item schedule-tone-' + (index % 4)} key={item.id || item.title}><span className="dashboard-schedule-time">{item.timeSlot}</span><b>{item.title}</b><small>{item.type}</small></article>)}</div> : <div className="dashboard-schedule-empty"><span>No plan blocks yet. A gentle outline can make the day easier to see.</span><button onClick={() => onNavigateToTab('planner')}>Build a day plan <ArrowRight size={13} /></button></div>}
+      </section>
+
+      <div className="dashboard-content-grid">
+        <section className="dashboard-card dashboard-task-card">
+          <div className="dashboard-card-heading">
+            <div><span className="dashboard-section-kicker">A CLEAR NEXT STEP</span><h2>On your mind</h2><p>Keep the important things close, without carrying them all at once.</p></div>
+            <div className="dashboard-task-tools">
+              <div className="dashboard-view-switch" role="group" aria-label="Task display">
+                <button className={taskView === 'list' ? 'selected' : ''} onClick={() => setTaskView('list')} aria-label="List view"><List size={14} /></button>
+                <button className={taskView === 'stack' ? 'selected' : ''} onClick={() => setTaskView('stack')} aria-label="Stack view"><Layers size={14} /></button>
+              </div>
+              <button className="dashboard-icon-link" onClick={() => onNavigateToTab('commitments')} aria-label="View all commitments"><ArrowUpRight size={17} /></button>
+            </div>
+          </div>
+          <form className="dashboard-quick-add" onSubmit={handleQuickAdd}>
+            <Plus size={16} />
+            <input value={quickTask} onChange={event => setQuickTask(event.target.value)} placeholder="Add a small task for today…" aria-label="Quick add a commitment" />
+            <button type="submit" disabled={!quickTask.trim()}>Add</button>
+          </form>
+          {dueNow.length === 0 && activeCommitments.length === 0 ? (
+            <div className="dashboard-empty"><CheckCircle2 size={22} /><b>Nothing urgent is waiting.</b><span>Add a commitment above, or enjoy the breathing room.</span></div>
+          ) : taskView === 'list' ? (
+            <div className="dashboard-task-list">
+              {(dueNow.length ? dueNow : activeCommitments).slice(0, 5).map(item => (
+                <article className="dashboard-task-row" key={item.id}>
+                  <button className="dashboard-task-check" onClick={() => toggleCommitment(item.id)} aria-label={'Complete ' + item.title}><Check size={13} /></button>
+                  <div className="dashboard-task-copy"><b>{item.title}</b><span>{item.subject || item.type} <i /> {formatDueDate(item.dueDate)}</span></div>
+                  <span className={'dashboard-priority priority-' + item.priority}>{item.priority}</span>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="dashboard-tower-stage">
+              <TodoTower items={activeCommitments.slice(0, 8).map(({ id, title }) => ({ id, title }))} onComplete={toggleCommitment} />
+              <small>Move a card, or tap one to mark it complete.</small>
+            </div>
+          )}
+          <button className="dashboard-text-action" onClick={() => onNavigateToTab('commitments')}>See all commitments <ArrowRight size={14} /></button>
+        </section>
+
+        <section className="dashboard-card dashboard-upcoming-card">
+          <div className="dashboard-card-heading">
+            <div><span className="dashboard-section-kicker">AHEAD, AT YOUR PACE</span><h2>Coming up</h2><p>Your next commitments, in date order.</p></div>
+            <button className="dashboard-icon-link" onClick={() => onNavigateToTab('calendar')} aria-label="Open calendar"><CalendarDays size={17} /></button>
+          </div>
+          {upcoming.length === 0 ? (
+            <div className="dashboard-inline-empty">No upcoming commitments yet.</div>
+          ) : (
+            <div className="dashboard-upcoming-list">
+              {upcoming.map(item => (
+                <article className="dashboard-upcoming-row" key={item.id}>
+                  <span className={'dashboard-deadline-ring priority-' + item.priority} style={{ '--deadline-progress': Math.max(8, 100 - Math.max(0, daysUntil(item.dueDate) || 0) * 8) + '%' } as React.CSSProperties}>
+                    <span>{daysUntil(item.dueDate) === null ? '—' : daysUntil(item.dueDate) === 0 ? '!' : daysUntil(item.dueDate) + 'd'}</span>
+                  </span>
+                  <div><b>{item.title}</b><small>{item.subject || item.type}{item.dueTime ? ' · ' + item.dueTime : ''}</small></div>
+                  <span className={'dashboard-priority priority-' + item.priority}>{daysUntil(item.dueDate) === null ? 'No date' : daysUntil(item.dueDate) === 0 ? 'Today' : daysUntil(item.dueDate) + ' days'}</span>
+                </article>
+              ))}
+            </div>
+          )}
+          <button className="dashboard-text-action" onClick={() => onNavigateToTab('calendar')}>Open calendar <ArrowRight size={14} /></button>
+        </section>
+
+        <section className="dashboard-card dashboard-academic-card">
+          <div className="dashboard-card-heading"><div><span className="dashboard-section-kicker">PROGRESS, IN PERSPECTIVE</span><h2>Academic progress</h2><p>Work moving forward, one piece at a time.</p></div><button className="dashboard-icon-link" onClick={() => onNavigateToTab('database')} aria-label="View academics"><BookOpen size={17} /></button></div>
+          {subjectStats.length ? <div className="dashboard-subject-list">{subjectStats.map((subject, index) => <div className="dashboard-subject-row" key={subject.name}><div><b>{subject.name}</b><small>{subject.done} of {subject.total} complete</small></div><div className={'dashboard-subject-track subject-tone-' + index}><span style={{ width: Math.round((subject.done / subject.total) * 100) + '%' }} /></div></div>)}</div> : <div className="dashboard-inline-empty">Add coursework to see your progress by subject.</div>}
+          <button className="dashboard-text-action" onClick={() => onNavigateToTab('database')}>View syllabus & assignments <ArrowRight size={14} /></button>
+        </section>
+
+        <section className="dashboard-card dashboard-kairo-card">
+          <div className="dashboard-kairo-orb" aria-hidden="true"><span>✳</span></div>
+          <span className="dashboard-section-kicker">HERE WHEN YOU NEED A HAND</span>
+          <h2>Let’s untangle<br /><em>what comes next.</em></h2>
+          <p>{recommendedTask ? 'Want me to break down ' + recommendedTask.title + ' into smaller steps?' : 'Want help shaping a gentle plan for your day?'}</p>
+          <form className="dashboard-kairo-form" onSubmit={event => { event.preventDefault(); const question = kairoQuestion.trim(); if (!question) return; onAskKairo(question); setKairoQuestion(''); }}>
+            <input aria-label="Ask Kairo from your dashboard" value={kairoQuestion} onChange={event => setKairoQuestion(event.target.value)} placeholder="Ask Kairo about your day…" />
+            <button type="submit" aria-label="Open Kairo with this question" disabled={!kairoQuestion.trim()}><ArrowRight size={15} /></button>
+          </form>
+          <button className="dashboard-kairo-link" onClick={() => onNavigateToTab('assistant')}><Bot size={14} /> Open Kairo <ArrowUpRight size={12} /></button>
+        </section>
+
+        {activeGoal && <section className="dashboard-goal-banner"><div className="dashboard-goal-icon"><Target size={20} /></div><div><span className="dashboard-section-kicker">A MILESTONE IN MOTION</span><h2>{activeGoal.title}</h2><p>{activeGoal.progressPercentage}% complete · {activeGoal.description}</p></div><div className="dashboard-goal-progress"><span style={{ width: activeGoal.progressPercentage + '%' }} /></div><button onClick={() => onNavigateToTab('goals')}>See your roadmap <ArrowRight size={14} /></button></section>}
       </div>
-
     </div>
   );
 };
+
