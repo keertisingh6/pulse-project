@@ -185,5 +185,6 @@ export interface PulseState {
     modelName: string;
     apiKey?: string;
   };
+  memePersonalityMode?: 'off' | 'college_friend' | 'full_desi';
 }
 
