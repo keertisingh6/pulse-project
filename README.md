@@ -84,7 +84,7 @@ Create a `.env` file in the root directory (based on `.env.example`):
 
 | Variable | Description |
 |---|---|
-| `GEMINI_API_KEY` | Server-side Google Gemini key for Kairo and other Gemini-backed AI features. Set it in the project root `.env` for local development or the server runtime environment in deployment; restart the server after changing it. |
+| `GEMINI_API_KEY` | Server-side Google Gemini key for Kairo and other Gemini-backed AI features. Set it in the project root `.env` for local development or in Vercel Project Settings → Environment Variables for deployment. Restart locally or redeploy on Vercel after changing it. |
 
 **Important:** Never commit API keys, passwords, or other secrets to GitHub.
 
@@ -107,3 +107,4 @@ Our vision is to make productivity more intelligent, personalized, and sustainab
 
 - **Keerti Singh** — [@keertisingh6](https://github.com/keertisingh6)
 - **Samridhi Chourasia** — [@samcodes11](https://github.com/samcodes11)
+
