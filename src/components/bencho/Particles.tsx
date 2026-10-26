@@ -1,5 +1,6 @@
 /* Adapted from Bencho's MIT-licensed Particles component (bencho.dev/licence). */
 import { useEffect, useRef } from "react";
+import type * as React from "react";
 
 /* ══ Particles ════════════════════════════════════════════
    A shape made of dots. Move over it and the dots are pushed
@@ -300,3 +301,4 @@ export function Particles({
     </div>
   );
 }
+
