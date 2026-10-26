@@ -12,11 +12,13 @@ import { GoalsView } from './components/GoalsView';
 import { AIAssistantView } from './components/AIAssistantView';
 import { SettingsView } from './components/SettingsView';
 import { CommitmentsFeed } from './components/CommitmentsFeed';
+import { InsightsView } from './components/InsightsView';
+import { RemindersView } from './components/RemindersView';
 import { 
   LayoutDashboard, Calendar as CalendarIcon, BookOpen, 
   Shield, Lock, Sparkles, Clock, Settings, 
   Target, Bot, Zap, LogOut, ChevronDown, Bell, Search, 
-  Maximize2, Plus, CheckCircle2, ChevronRight, Menu, X
+  Maximize2, Plus, CheckCircle2, ChevronRight, Menu, X, ArrowUpRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -30,6 +32,8 @@ type TabType =
   | 'calendar' 
   | 'goals' 
   | 'assistant' 
+  | 'insights'
+  | 'reminders'
   | 'settings' 
   | 'setup';
 
@@ -38,6 +42,8 @@ function PulseApp() {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [assistantPrefill, setAssistantPrefill] = useState('');
   const { state, logout } = usePulse();
 
   // App Access Check: allow entering Pulse without requiring authentication
@@ -47,7 +53,7 @@ function PulseApp() {
 
   // Personal Setup Guard for fresh onboardings
   if (!state.profile?.hasCompletedSetup && activeTab !== 'setup') {
-    return <PersonalSetup onComplete={() => setActiveTab('dashboard')} />;
+    return <div id="pulse-workspace" className="workspace-setup"><PersonalSetup onComplete={() => setActiveTab('dashboard')} /></div>;
   }
 
   const handleLogout = () => {
@@ -60,17 +66,23 @@ function PulseApp() {
     : (state.userName ? state.userName.charAt(0).toUpperCase() : 'S');
 
   const displayName = state.user?.name || state.userName || 'Student';
+  const firstName = displayName.trim().split(/\s+/)[0] || 'there';
+  const searchResults = searchQuery.trim()
+    ? state.commitments.filter(item => [item.title, item.subject, item.type, item.notes].join(' ').toLowerCase().includes(searchQuery.trim().toLowerCase())).slice(0, 5)
+    : [];
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
-    { id: 'planner', label: 'Daily Planner', icon: <Clock className="w-4 h-4" /> },
+    { id: 'database', label: 'Academics', icon: <BookOpen className="w-4 h-4" /> },
     { id: 'commitments', label: 'Commitments', icon: <CheckCircle2 className="w-4 h-4" /> },
-    { id: 'database', label: 'Assignments', icon: <BookOpen className="w-4 h-4" /> },
-    { id: 'zen', label: 'Focus Studio', icon: <Shield className="w-4 h-4" /> },
-    { id: 'blocklist', label: 'Block List', icon: <Lock className="w-4 h-4" /> },
-    { id: 'calendar', label: 'Calendar', icon: <CalendarIcon className="w-4 h-4" /> },
+    { id: 'planner', label: 'Planner', icon: <Clock className="w-4 h-4" /> },
     { id: 'goals', label: 'Goals', icon: <Target className="w-4 h-4" /> },
-    { id: 'assistant', label: 'AI Study Buddy', icon: <Bot className="w-4 h-4" /> },
+    { id: 'assistant', label: 'Kairo', icon: <Bot className="w-4 h-4" /> },
+    { id: 'zen', label: 'Focus Studio', icon: <Shield className="w-4 h-4" /> },
+    { id: 'insights', label: 'Insights', icon: <Zap className="w-4 h-4" /> },
+    { id: 'reminders', label: 'Reminders', icon: <Bell className="w-4 h-4" /> },
+    { id: 'calendar', label: 'Calendar', icon: <CalendarIcon className="w-4 h-4" /> },
+    { id: 'blocklist', label: 'Block List', icon: <Lock className="w-4 h-4" /> },
     { id: 'settings', label: 'Settings', icon: <Settings className="w-4 h-4" /> },
   ];
 
@@ -111,6 +123,8 @@ function PulseApp() {
                 </div>
               </div>
 
+              <div className="workspace-sidebar-greeting">Hi, {firstName}<small>Make today your own.</small></div>
+
               {/* Close button on mobile */}
               <button 
                 onClick={() => setMobileSidebarOpen(false)}
@@ -130,8 +144,9 @@ function PulseApp() {
             </button>
 
             {/* Sidebar Navigation */}
-            <nav className="space-y-1">
-              {navItems.map(item => {
+            <nav className="workspace-nav">
+              <span className="workspace-nav-label">YOUR WORKSPACE</span>
+              {navItems.slice(0, 5).map(item => {
                 const isSelected = activeTab === item.id;
                 return (
                   <button
@@ -153,11 +168,26 @@ function PulseApp() {
                   </button>
                 );
               })}
+              <span className="workspace-nav-label workspace-nav-label-tools">STUDY TOOLS</span>
+              {navItems.slice(5).map(item => {
+                const isSelected = activeTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => { setActiveTab(item.id as TabType); setMobileSidebarOpen(false); }}
+                    className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer ${isSelected ? 'bg-[#E7EFE6] text-[#405437] shadow-2xs font-extrabold' : 'text-[#485346] hover:bg-[#F4F2EC] hover:text-[#212C1E]'}`}
+                  >
+                    <span className={isSelected ? 'text-[#5E7353]' : 'text-slate-400'}>{item.icon}</span>
+                    <span className="truncate">{item.label}</span>
+                  </button>
+                );
+              })}
             </nav>
           </div>
 
           {/* Bottom user card in sidebar */}
           <div className="pt-4 border-t border-[#EFECE6] space-y-2">
+            <button className="sidebar-weekly-nudge" onClick={() => setActiveTab('planner')}><span className="sidebar-nudge-star">✳</span><span><b>Plan your week</b><small>A little clarity goes a long way.</small></span><ArrowUpRight size={14} /></button>
             <div className="flex items-center gap-2.5 p-2 bg-[#F6F4EE] rounded-2xl">
               {state.user?.avatar ? (
                 <img
@@ -223,11 +253,37 @@ function PulseApp() {
                 <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
-                  placeholder="Search coursework, tasks, syllabus..."
+                  placeholder="Search commitments..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
+                  onFocus={() => setSearchOpen(true)}
+                  onBlur={() => window.setTimeout(() => setSearchOpen(false), 120)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') setSearchOpen(false);
+                    if (e.key === 'Enter' && searchQuery.trim()) {
+                      setActiveTab('commitments');
+                      setSearchOpen(false);
+                    }
+                  }}
                   className="w-full pl-9 pr-3 py-1.5 bg-[#FAF9F5] border border-[#E8E4DA] rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[#7C9070]"
                 />
+                {searchOpen && searchQuery.trim() && (
+                  <div className="workspace-search-menu">
+                    {searchResults.length ? searchResults.map(item => (
+                      <button
+                        type="button"
+                        className="workspace-search-result"
+                        key={item.id}
+                        onMouseDown={event => event.preventDefault()}
+                        onClick={() => { setActiveTab('commitments'); setSearchOpen(false); }}
+                      >
+                        <Search className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                        <span><b>{item.title}</b><small>{item.subject || item.type} · {item.dueDate || 'No due date'}</small></span>
+                        <ArrowUpRight className="w-3 h-3 text-slate-400" />
+                      </button>
+                    )) : <div className="workspace-search-empty">No matching commitments found.</div>}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -259,7 +315,7 @@ function PulseApp() {
                 transition={{ duration: 0.18 }}
               >
                 {activeTab === 'dashboard' && (
-                  <FocusMateDashboard onNavigateToTab={(t) => setActiveTab(t)} />
+                  <FocusMateDashboard onNavigateToTab={(t) => setActiveTab(t)} onAskKairo={(message) => { setAssistantPrefill(message); setActiveTab('assistant'); }} />
                 )}
 
                 {activeTab === 'planner' && (
@@ -279,7 +335,7 @@ function PulseApp() {
                 )}
 
                 {(activeTab === 'commitments' || (activeTab as string) === 'inbox') && (
-                  <CommitmentsFeed />
+                  <CommitmentsFeed initialSearch={searchQuery} />
                 )}
 
                 {activeTab === 'calendar' && (
@@ -290,9 +346,15 @@ function PulseApp() {
                   <GoalsView onAddCommitmentForGoal={() => setActiveTab('commitments')} />
                 )}
 
+                {activeTab === 'insights' && <InsightsView />}
+
+                {activeTab === 'reminders' && <RemindersView onOpenCommitments={() => setActiveTab('commitments')} />}
+
                 {activeTab === 'assistant' && (
                   <AIAssistantView 
                     onNavigateToTab={(t) => setActiveTab(t)} 
+                    initialQuestion={assistantPrefill}
+                    onPrefillConsumed={() => setAssistantPrefill('')}
                     onStartFocusTimer={() => setActiveTab('zen')}
                   />
                 )}
@@ -309,6 +371,14 @@ function PulseApp() {
           </div>
 
         </div>
+
+        <nav className="workspace-mobile-nav" aria-label="Mobile navigation">
+          <button className={activeTab === 'dashboard' ? 'selected' : ''} onClick={() => setActiveTab('dashboard')}><LayoutDashboard size={18} /><span>Home</span></button>
+          <button className={activeTab === 'planner' ? 'selected' : ''} onClick={() => setActiveTab('planner')}><Clock size={18} /><span>Plan</span></button>
+          <button className={'mobile-kairo-fab' + (activeTab === 'assistant' ? ' selected' : '')} onClick={() => setActiveTab('assistant')} aria-label="Open Kairo"><Bot size={20} /></button>
+          <button className={activeTab === 'database' ? 'selected' : ''} onClick={() => setActiveTab('database')}><BookOpen size={18} /><span>Study</span></button>
+          <button className={activeTab === 'zen' ? 'selected' : ''} onClick={() => setActiveTab('zen')}><Shield size={18} /><span>Focus</span></button>
+        </nav>
 
       </div>
 
