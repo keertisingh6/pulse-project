@@ -713,7 +713,7 @@ type Pose = { id: number; x: number; y: number; a: number };
 /* WALL ids sit well clear of the cards' */
 const FLOOR = 100, LEFT = 101, RIGHT = 102, ROOF = 103;
 
-const tower = (items: TowerPhysicsItem[], sl: number, fr: number, lift = 0): Body[] =>
+const tower = (items: TowerPhysicsItem[], n: number, sl: number, fr: number, lift = 0): Body[] =>
   items.map(({ bodyId }, i) =>
     box(
       bodyId,
@@ -980,7 +980,7 @@ export function TodoTower({
       cancelAnimationFrame(raf.current);
       running.current = false;
       const T = world(grav(gravity), RESTITUTION);
-      T.bodies = tower(towerItems, sl, fr);
+      T.bodies = tower(towerItems, n, sl, fr);
       W0.current = T;
       walls();
       setGoing(null);
@@ -1297,3 +1297,4 @@ export function TodoTower({
 /* Keep the source component name available for callers using the
    Bencho example, while Pulse uses the task-aware TodoTower API. */
 export const Tower = TodoTower;
+
