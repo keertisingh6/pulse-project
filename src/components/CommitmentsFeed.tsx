@@ -827,6 +827,7 @@ export const CommitmentsFeed: React.FC<{ initialSearch?: string }> = ({ initialS
                       <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border uppercase tracking-wider ${getCategoryStyles(c.type)}`}>
                         {getCategoryEmoji(c.type)} {c.type}
                       </span>
+                      <span className={`commitment-priority-chip priority-${c.priority}`}>{c.priority} priority</span>
 
                       {/* Health Quick Status */}
                       {!c.completed && (
