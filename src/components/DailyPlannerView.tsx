@@ -304,21 +304,17 @@ export const DailyPlannerView: React.FC<{ initialDate?: string }> = ({ initialDa
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 planner-page" id="planner-page">
       
       {/* Planner Header matching FocusMate tablet view */}
-      <div className="bg-white border border-[#EBE9E0] rounded-[2rem] p-6 md:p-8 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="planner-page-hero app-page-hero">
         <div className="space-y-1.5">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#7C9070]/10 text-[#7C9070] rounded-full text-xs font-semibold">
             <CalendarIcon className="w-3.5 h-3.5" />
             <span>Weekly Planner</span>
           </div>
-          <h2 className="text-2xl md:text-3xl font-bold text-[#1A1A1B] tracking-tight">
-            Your week, with room to breathe
-          </h2>
-          <p className="text-xs md:text-sm text-[#1A1A1B]/60 max-w-xl">
-            See your week at a glance, then choose one day to make a little more spacious.
-          </p>
+          <h1>Weekly Planner <span aria-hidden="true">🌿</span></h1>
+          <p>View your commitments and schedule the week at a pace that feels possible.</p>
         </div>
 
         {/* Date Selector Navigation */}
