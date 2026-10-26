@@ -3,9 +3,24 @@ import { usePulse } from '../context/PulseContext';
 import { Goal, GoalMilestone } from '../types';
 import { 
   Target, Plus, CheckCircle2, Circle, Calendar, 
-  Clock, BookOpen, ChevronRight, Award, Trash2, X, Check, Sparkles 
+  Clock, BookOpen, ChevronRight, Award, Trash2, X, Check, Sparkles,
+  BriefcaseBusiness, Code2, Dumbbell, GraduationCap, Heart, Laptop
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+
+const goalIconFor = (value: string) => {
+  const key = value.toLowerCase().replaceAll('_', '-');
+  const Icon = key.includes('book') ? BookOpen
+    : key.includes('spark') ? Sparkles
+    : key.includes('career') || key.includes('briefcase') ? BriefcaseBusiness
+    : key.includes('code') || key.includes('project') ? Code2
+    : key.includes('health') || key.includes('fitness') ? Dumbbell
+    : key.includes('graduat') || key.includes('academic') ? GraduationCap
+    : key.includes('laptop') || key.includes('tech') ? Laptop
+    : key.includes('heart') || key.includes('personal') ? Heart
+    : null;
+  return Icon ? <Icon size={18} aria-hidden="true" /> : value;
+};
 
 export const GoalsView: React.FC<{ onAddCommitmentForGoal?: (goalTitle: string) => void }> = ({
   onAddCommitmentForGoal,
@@ -13,6 +28,7 @@ export const GoalsView: React.FC<{ onAddCommitmentForGoal?: (goalTitle: string) 
   const { state, addGoal, toggleGoalMilestone, deleteGoal } = usePulse();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedGoalId, setSelectedGoalId] = useState<string>(state.goals[0]?.id || '');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
   // New goal form state
   const [newTitle, setNewTitle] = useState('');
@@ -65,13 +81,15 @@ export const GoalsView: React.FC<{ onAddCommitmentForGoal?: (goalTitle: string) 
     setShowCreateModal(false);
   };
 
-  const activeGoal = state.goals.find(g => g.id === selectedGoalId) || state.goals[0];
+  const visibleGoals = state.goals.filter(goal => selectedCategory === 'all' || goal.category === selectedCategory);
+  const availableCategories = Array.from(new Set<string>(state.goals.map(goal => goal.category)));
+  const activeGoal = visibleGoals.find(g => g.id === selectedGoalId) || visibleGoals[0] || state.goals[0];
 
   return (
     <div className="space-y-6" id="goals-page">
       
       {/* Header Banner */}
-      <div className="bg-white border border-[#EBE9E0] rounded-[2.5rem] p-6 md:p-8 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="goals-page-hero app-page-hero bg-white border border-[#EBE9E0] rounded-[2.5rem] p-6 md:p-8 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1.5">
           <div className="flex items-center gap-2">
             <span className="text-[10px] uppercase font-bold tracking-wider text-[#7C9070] bg-[#7C9070]/10 px-3 py-0.5 rounded-full">
@@ -97,6 +115,11 @@ export const GoalsView: React.FC<{ onAddCommitmentForGoal?: (goalTitle: string) 
           <span>New Goal</span>
         </button>
       </div>
+
+      {state.goals.length > 0 && <div className="goal-category-filters" role="group" aria-label="Filter goals by category">
+        <button type="button" className={selectedCategory === 'all' ? 'selected' : ''} onClick={() => setSelectedCategory('all')}>All ({state.goals.length})</button>
+        {availableCategories.map(category => <button type="button" key={category} className={selectedCategory === category ? 'selected' : ''} onClick={() => setSelectedCategory(category)}>{category === 'academic' ? 'Academic' : category[0].toUpperCase() + category.slice(1)} ({state.goals.filter(goal => goal.category === category).length})</button>)}
+      </div>}
 
       {/* Main Grid: Goal Selector (Left) + Detailed Deep-Dive (Right) */}
       {state.goals.length === 0 ? (
@@ -128,7 +151,7 @@ export const GoalsView: React.FC<{ onAddCommitmentForGoal?: (goalTitle: string) 
             </span>
 
             <div className="space-y-3 goal-card-grid">
-              {state.goals.map(goal => {
+              {visibleGoals.map(goal => {
                 const isSelected = goal.id === activeGoal?.id;
                 const completedCount = goal.milestones.filter(m => m.completed).length;
 
@@ -154,7 +177,7 @@ export const GoalsView: React.FC<{ onAddCommitmentForGoal?: (goalTitle: string) 
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-center gap-2.5">
                         <span className="text-xl p-1.5 bg-[#FAF9F6] rounded-xl border border-[#EBE9E0]">
-                          {goal.icon}
+                          {goalIconFor(goal.icon)}
                         </span>
                         <div>
                           <h4 className="font-serif font-bold text-xs md:text-sm text-[#1A1A1B] line-clamp-1">
@@ -191,7 +214,7 @@ export const GoalsView: React.FC<{ onAddCommitmentForGoal?: (goalTitle: string) 
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#EBE9E0] pb-5">
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 rounded-2xl bg-[#FAF9F6] border border-[#EBE9E0] flex items-center justify-center text-2xl shadow-2xs">
-                    {activeGoal.icon}
+                    {goalIconFor(activeGoal.icon)}
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
