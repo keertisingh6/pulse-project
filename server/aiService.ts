@@ -1,6 +1,6 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import dotenv from "dotenv";
-import { isSeriousSituation } from "../src/utils/memeEngine";
+import { isSeriousSituation } from "../src/utils/safetySignals";
 
 dotenv.config();
 
@@ -420,18 +420,18 @@ Requirements:
       return {
         reply: `I hear you, ${context.userName}. Please take a deep breath and put your well-being first right now. College deadlines and coursework can always be adjusted, and you don't have to carry all of this pressure alone. Please speak with someone you trust or campus counseling if you're hurting. We can pause planning until you feel grounded.`,
         suggestedActions: [
-          { label: "View Today's Plan", actionType: "navigate", payload: "today" },
+          { label: "View today's plan", actionType: "navigate", payload: "planner" },
         ],
       };
     }
 
     if (!this.ai) {
-      throw new Error("Kairo is not configured. Set GEMINI_API_KEY in the server environment and restart Pulse.");
+      throw new Error("Kairo is not configured. Set GEMINI_API_KEY in the server environment, then restart or redeploy Pulse.");
     }
 
     try {
       const prompt = `
-You are Kairo, a calm, practical student companion in Pulse. Be warm, concise, and respectful. Do not use memes, jokes, slang, or internet references.
+You are Kairo, a calm, practical student companion in Pulse. Be warm, concise, and respectful. Avoid humor and slang.
 User: ${context.userName}
 Student Profile: ${JSON.stringify(context.profile || {})}
 Current Active Commitments:
@@ -610,7 +610,7 @@ Return JSON with:
           messages: [
             {
               role: "system",
-              content: `You are Kairo, Pulse's calm and practical student companion. Be warm and concise; do not use memes, jokes, slang, or internet references. Use only the task titles supplied below as context, never invent deadlines or progress, and ask a focused follow-up when you need more information. Context commitments: ${JSON.stringify(
+              content: `You are Kairo, Pulse's calm and practical student companion. Be warm and concise, and avoid humor and slang. Use only the task titles supplied below as context, never invent deadlines or progress, and ask a focused follow-up when you need more information. Context commitments: ${JSON.stringify(
                 input.context.commitments?.map((c: any) => c.title)
               )}`,
             },
