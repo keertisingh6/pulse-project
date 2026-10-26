@@ -75,17 +75,17 @@ export const GoalsView: React.FC<{ onAddCommitmentForGoal?: (goalTitle: string) 
         <div className="space-y-1.5">
           <div className="flex items-center gap-2">
             <span className="text-[10px] uppercase font-bold tracking-wider text-[#7C9070] bg-[#7C9070]/10 px-3 py-0.5 rounded-full">
-              Long-Term Trajectory
+              Goals & Roadmaps
             </span>
             <span className="text-xs text-[#1A1A1B]/40 font-mono">
-              {state.goals.length} Active North Stars
+              {state.goals.length} goals
             </span>
           </div>
           <h2 className="font-serif font-light text-2xl md:text-3xl text-[#1A1A1B]">
-            Break ambitious goals into <span className="italic font-normal">gentle weekly rhythms</span>.
+            Goals
           </h2>
           <p className="text-xs text-[#1A1A1B]/60 max-w-xl leading-relaxed">
-            Every long-term exam (GATE, GRE), career milestone (Internship), and degree target connects directly to tasks tracked in your commitments planner.
+            Big dreams, small steps, steady progress.
           </p>
         </div>
 
@@ -94,7 +94,7 @@ export const GoalsView: React.FC<{ onAddCommitmentForGoal?: (goalTitle: string) 
           className="flex items-center gap-2 bg-[#7C9070] hover:bg-[#6c7d61] text-white px-5 py-3 rounded-2xl text-xs font-bold transition-all shadow-md shadow-[#7C9070]/15 shrink-0 cursor-pointer"
         >
           <Plus className="w-4 h-4" />
-          <span>New Long-Term Goal</span>
+          <span>New Goal</span>
         </button>
       </div>
 
@@ -119,7 +119,7 @@ export const GoalsView: React.FC<{ onAddCommitmentForGoal?: (goalTitle: string) 
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 goals-layout-grid">
           
           {/* Left Column: Goals List cards (1 col) */}
           <div className="space-y-3">
@@ -127,7 +127,7 @@ export const GoalsView: React.FC<{ onAddCommitmentForGoal?: (goalTitle: string) 
               Your Tracked Ambitions
             </span>
 
-            <div className="space-y-3">
+            <div className="space-y-3 goal-card-grid">
               {state.goals.map(goal => {
                 const isSelected = goal.id === activeGoal?.id;
                 const completedCount = goal.milestones.filter(m => m.completed).length;
@@ -184,7 +184,7 @@ export const GoalsView: React.FC<{ onAddCommitmentForGoal?: (goalTitle: string) 
 
         {/* Right Column: Goal Detail View (2 cols) */}
         {activeGoal && (
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-6 goal-detail-panel">
             <div className="bg-white border border-[#EBE9E0] rounded-[2rem] p-6 md:p-8 shadow-sm space-y-6">
               
               {/* Goal Detail Header */}
