@@ -20,6 +20,8 @@ const getCategoryEmoji = (type: CommitmentType) => {
   switch (type) {
     case 'Assignment': return '📚';
     case 'Exam': return '📝';
+    case 'Lab': return '🧪';
+    case 'Hackathon': return '💻';
     case 'Class': return '🏫';
     case 'Meeting': return '💼';
     case 'Bill': return '💳';
@@ -37,6 +39,8 @@ const getCategoryStyles = (type: CommitmentType) => {
   switch (type) {
     case 'Assignment': return 'bg-rose-50 text-rose-600 border-rose-100';
     case 'Exam': return 'bg-rose-100 text-rose-700 border-rose-200';
+    case 'Lab': return 'bg-sky-50 text-sky-700 border-sky-100';
+    case 'Hackathon': return 'bg-amber-50 text-amber-800 border-amber-100';
     case 'Class': return 'bg-amber-50 text-amber-700 border-amber-100';
     case 'Meeting': return 'bg-sky-50 text-sky-600 border-sky-100';
     case 'Bill': return 'bg-emerald-50 text-emerald-600 border-emerald-100';
@@ -88,7 +92,7 @@ const getCommitmentHealth = (c: Commitment, now: Date = new Date()) => {
   const effortMin = c.effortMinutes || 60;
   const effortHours = effortMin / 60;
 
-  if (c.type === 'Assignment' || c.type === 'Exam' || c.type === 'Task') {
+  if (c.type === 'Assignment' || c.type === 'Exam' || c.type === 'Lab' || c.type === 'Hackathon' || c.type === 'Task') {
     const isOverdueRisk = hoursLeft < effortHours;
     const isTight = hoursLeft < effortHours * 2.5;
 
@@ -233,7 +237,7 @@ export const CommitmentsFeed: React.FC<{ initialSearch?: string }> = ({ initialS
   const [prepTime, setPrepTime] = useState(0);
 
   const typesList = [
-    'All', 'Assignment', 'Exam', 'Class', 'Interview', 'Meeting', 'Bill', 'Task', 'Personal', 'Appointment', 'Event', 'Travel'
+    'All', 'Assignment', 'Exam', 'Lab', 'Hackathon', 'Class', 'Interview', 'Meeting', 'Bill', 'Task', 'Personal', 'Appointment', 'Event', 'Travel'
   ];
 
   // Helper calculation for display times remaining
@@ -365,6 +369,10 @@ export const CommitmentsFeed: React.FC<{ initialSearch?: string }> = ({ initialS
 
   return (
     <div className="space-y-6" id="commitments-feed">
+      <div className="commitments-page-heading">
+        <div><span className="commitments-page-kicker">YOUR WORK, IN ONE PLACE</span><h1>Commitments</h1><p>Track assignments, exams, labs, and the projects you care about.</p></div>
+        <button onClick={() => setShowAddForm(!showAddForm)} className="commitments-add-button"><Plus size={15} /> Add Commitment</button>
+      </div>
       {/* Search & Actions Header */}
       <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
         <div className="relative w-full sm:max-w-xs">
@@ -396,13 +404,6 @@ export const CommitmentsFeed: React.FC<{ initialSearch?: string }> = ({ initialS
             </button>
           )}
 
-          <button
-            onClick={() => setShowAddForm(!showAddForm)}
-            className="flex items-center gap-1.5 bg-[#7C9070] hover:bg-[#6c7d61] text-white font-semibold px-4 py-2 text-sm rounded-xl transition-colors shadow-sm ml-auto sm:ml-0 cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add Commitment</span>
-          </button>
         </div>
       </div>
 
@@ -418,7 +419,8 @@ export const CommitmentsFeed: React.FC<{ initialSearch?: string }> = ({ initialS
                 : 'bg-white text-[#1A1A1B]/60 border-[#EBE9E0] hover:bg-[#FAF9F6]'
             }`}
           >
-            {type}
+            <span>{type === 'Assignment' ? 'Assignments' : type === 'Exam' ? 'Exams' : type === 'Lab' ? 'Labs' : type === 'Hackathon' ? 'Hackathons' : type}</span>
+            <small>{type === 'All' ? state.commitments.length : state.commitments.filter(item => item.type === type).length}</small>
           </button>
         ))}
       </div>
@@ -449,7 +451,7 @@ export const CommitmentsFeed: React.FC<{ initialSearch?: string }> = ({ initialS
             <div className="space-y-1">
               <label className="text-xs text-[#1A1A1B]/60 font-semibold block">Category</label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {(['Assignment', 'Meeting', 'Bill', 'Appointment', 'Event', 'Travel'] as CommitmentType[]).map(cat => {
+                {(['Assignment', 'Exam', 'Lab', 'Hackathon', 'Meeting', 'Bill', 'Appointment', 'Event', 'Travel'] as CommitmentType[]).map(cat => {
                   const isSelected = newType === cat;
                   return (
                     <button
@@ -827,6 +829,7 @@ export const CommitmentsFeed: React.FC<{ initialSearch?: string }> = ({ initialS
                       <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border uppercase tracking-wider ${getCategoryStyles(c.type)}`}>
                         {getCategoryEmoji(c.type)} {c.type}
                       </span>
+                      {c.subject && <span className="commitment-subject-tag">{c.subject}</span>}
                       <span className={`commitment-priority-chip priority-${c.priority}`}>{c.priority} priority</span>
 
                       {/* Health Quick Status */}
