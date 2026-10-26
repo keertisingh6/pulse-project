@@ -34,11 +34,15 @@ const renderInlineMarkdown = (text: string) => text.split(/(\*\*[^*]+\*\*)/g).ma
 interface AIAssistantViewProps {
   onNavigateToTab: (tab: 'planner' | 'calendar' | 'goals' | 'commitments' | 'database') => void;
   onStartFocusTimer?: (minutes: number) => void;
+  initialQuestion?: string;
+  onPrefillConsumed?: () => void;
 }
 
 export const AIAssistantView: React.FC<AIAssistantViewProps> = ({ 
-  onNavigateToTab, 
-  onStartFocusTimer 
+  onNavigateToTab,
+  onStartFocusTimer,
+  initialQuestion = '',
+  onPrefillConsumed,
 }) => {
   const { state, askAssistant } = usePulse();
   const displayName = state.user?.name || state.userName || 'Student';
@@ -54,6 +58,12 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({
   ]);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!initialQuestion) return;
+    setInputMessage(initialQuestion);
+    onPrefillConsumed?.();
+  }, [initialQuestion, onPrefillConsumed]);
 
   useEffect(() => {
     let active = true;
@@ -156,7 +166,11 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 text-xs text-[#1A1A1B]/50 font-medium">
+        <div className={'assistant-status assistant-status-' + assistantStatus} role="status" aria-live="polite">
+          <span className="assistant-status-dot" />
+          <span>{assistantStatus === 'checking' ? 'Checking Kairo…' : assistantStatus === 'ready' ? 'Kairo is ready' : assistantStatus === 'missing-key' ? 'AI key needed' : 'Kairo is offline'}</span>
+        </div>
+        <div className="hidden md:flex items-center gap-2 text-xs text-[#1A1A1B]/50 font-medium">
           <Shield className="w-3.5 h-3.5 text-[#7C9070]" />
           <span>Answers grounded in real Pulse data</span>
         </div>
