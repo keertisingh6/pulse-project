@@ -1,6 +1,6 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import dotenv from "dotenv";
-import { evaluateSituationAndSelectMeme, isSeriousSituation } from "../src/utils/memeEngine";
+import { isSeriousSituation } from "../src/utils/memeEngine";
 
 dotenv.config();
 
@@ -73,7 +73,6 @@ export interface IAIProvider {
       profile?: any;
       userName: string;
       streakDays?: number;
-      memePersonalityMode?: "off" | "college_friend" | "full_desi";
     };
   }): Promise<AssistantChatResult>;
 }
@@ -410,13 +409,11 @@ Requirements:
       profile?: any;
       userName: string;
       streakDays?: number;
-      memePersonalityMode?: "off" | "college_friend" | "full_desi";
     };
   }): Promise<AssistantChatResult> {
     const { message, context } = input;
     const activeCommitments = (context.commitments || []).filter((c) => !c.completed);
     const highPriority = activeCommitments.filter((c) => c.priority === "high");
-    const personalityMode = context.memePersonalityMode || "college_friend";
 
     // Immediate sensitivity check
     if (isSeriousSituation(message)) {
@@ -433,38 +430,8 @@ Requirements:
     }
 
     try {
-      const memeGuidelinePrompt = personalityMode === "off"
-        ? `PERSONALITY MODE: Strictly neutral, calm, professional mentor. No humor, no jokes, no slang.`
-        : `
-AUTHENTIC INDIAN MEME & DESI COLLEGE FRIEND PERSONALITY SYSTEM:
-Personality Mode: "${personalityMode}" ('college_friend' = witty authentic desi college buddy who knows the internet; 'full_desi' = hostelite banter with authentic desi humor).
-
-CRITICAL DIRECTIVES:
-1. NEVER invent fake Indian meme phrases.
-2. NEVER generate random generic "Indian-sounding" jokes or caricatures.
-3. NEVER produce generic Gen-Z chatbot slang.
-4. Reference ONLY REAL, ESTABLISHED Indian/desi internet meme formats when contextually appropriate:
-   - "Dekh Raha Hai Vinod" (Panchayat): For procrastination, suspicious decisions, deadline avoidance, questionable planning, observing chaotic schedules.
-   - "Binod": Use sparingly only for absurd/random situations or mystery drops. Never use simply because someone's name resembles Binod.
-   - "Rasode Mein Kaun Tha" (Saath Nibhaana Saathiya / Yashraj Mukhate): For schedule conflicts, identifying what caused a collision, or "who put this task here?".
-   - "Pawri Ho Rahi Hai" (viral Pawri trend): For completing a major goal, finishing an assignment, completing a productive day, streak continuation. Do not overuse.
-   - "Moye Moye" (viral social-media trend): For missed deadlines, failed plans, unexpectedly bad outcomes, humorous minor setbacks. NEVER for serious emotional distress.
-   - "JCB Ki Khudai" (JCB excavation trend): For distraction, unnecessary rabbit holes, wasting time watching/doing something unrelated.
-   - "Control Uday Control" (Welcome / Nana Patekar): For overloaded schedules, too many tasks, preventing unrealistic planning, calming down when user plan becomes excessive.
-   - "Why This Kolaveri Di" (Tanglish): For frustration with coding, difficult assignments, confusing errors, repeated failed attempts.
-   - "Gajab Beizzati Hai" (Panchayat): For surprising tough questions, forgotten tasks, self-deprecating student blunders.
-   - "Aap Chronology Samajhiye": For sequencing prerequisites before a big project/exam.
-   - "Risk Hai Toh Ishq Hai" (Scam 1992): For ambitious hackathons and tough academic challenges.
-   - "Babu Rao / Utha Le Re Baba" (Hera Pheri): For chaotic mornings or surprise 8 AM lectures.
-
-5. HUMOR HIERARCHY & BOUNDARIES:
-   - The humor must remain secondary to Pulse's actual productivity functionality.
-   - ALWAYS provide concrete, practical answers grounded in the user's actual commitments, dates, and courses.
-   - If the user discusses genuine emotional distress, anxiety attacks, depression, medical emergencies, or failing out of college, STRICTLY SUPPRESS ALL MEMES/HUMOR. Deliver calm, empathetic, and professional support.
-`;
-
       const prompt = `
-You are Kairo, the intelligent, grounded student companion for Pulse.
+You are Kairo, a calm, practical student companion in Pulse. Be warm, concise, and respectful. Do not use memes, jokes, slang, or internet references.
 User: ${context.userName}
 Student Profile: ${JSON.stringify(context.profile || {})}
 Current Active Commitments:
@@ -474,8 +441,6 @@ ${JSON.stringify(context.goals || [])}
 Today's Scheduled Plan:
 ${JSON.stringify(context.dailyPlan || [])}
 Streak: ${context.streakDays || 0} days
-
-${memeGuidelinePrompt}
 
 User says: "${message}"
 
@@ -645,7 +610,7 @@ Return JSON with:
           messages: [
             {
               role: "system",
-              content: `You are Kairo, the calm student mentor in Pulse. Context commitments: ${JSON.stringify(
+              content: `You are Kairo, Pulse's calm and practical student companion. Be warm and concise; do not use memes, jokes, slang, or internet references. Use only the task titles supplied below as context, never invent deadlines or progress, and ask a focused follow-up when you need more information. Context commitments: ${JSON.stringify(
                 input.context.commitments?.map((c: any) => c.title)
               )}`,
             },
@@ -686,3 +651,4 @@ export class AIProviderManager {
     return this.activeProvider.name;
   }
 }
+
