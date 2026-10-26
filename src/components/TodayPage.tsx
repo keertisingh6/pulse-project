@@ -134,11 +134,6 @@ export const TodayPage: React.FC<{ onNavigateToInbox: () => void }> = ({ onNavig
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <h4 className="font-bold">Honest Scheduling Alert: Conflict Detected</h4>
-              {state.memePersonalityMode !== 'off' && (
-                <span className="text-[10px] bg-amber-200/60 text-amber-900 px-2 py-0.5 rounded-full font-semibold">
-                  Rasode Mein Kaun Tha?
-                </span>
-              )}
             </div>
             <p className="leading-relaxed text-amber-800">
               {state.planConflicts[0]}
@@ -154,11 +149,6 @@ export const TodayPage: React.FC<{ onNavigateToInbox: () => void }> = ({ onNavig
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <h4 className="font-bold">Heavy Workload Today ({Math.floor(totalPlannedMinutes / 60)}h planned)</h4>
-              {state.memePersonalityMode !== 'off' && (
-                <span className="text-[10px] bg-sky-200/60 text-sky-900 px-2 py-0.5 rounded-full font-semibold">
-                  Control Uday Control 🧘‍♂️
-                </span>
-              )}
             </div>
             <p className="leading-relaxed text-sky-800">
               Pacing is essential. Consider moving lower-priority items to tomorrow so you don't burn out.
@@ -175,11 +165,6 @@ export const TodayPage: React.FC<{ onNavigateToInbox: () => void }> = ({ onNavig
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-bold text-sm">All focus targets completed for today!</span>
-                {state.memePersonalityMode !== 'off' && (
-                  <span className="text-[10px] bg-[#7C9070] text-white px-2 py-0.5 rounded-full font-bold">
-                    Pawri Ho Rahi Hai 🎉
-                  </span>
-                )}
               </div>
               <p className="text-[11px] text-[#1A1A1B]/70 mt-0.5">
                 Every single block is finished. Shut the laptop and take a guilt-free rest!
@@ -321,3 +306,4 @@ export const TodayPage: React.FC<{ onNavigateToInbox: () => void }> = ({ onNavig
     </div>
   );
 };
+
