@@ -75,10 +75,10 @@ function PulseApp() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#E6D4D1] via-[#F2E5DC] to-[#E9DCD3] p-2 sm:p-4 md:p-6 lg:p-8 flex items-center justify-center font-sans selection:bg-[#7C9070]/20">
+    <div id="pulse-workspace" className="min-h-screen bg-gradient-to-br from-[#E6D4D1] via-[#F2E5DC] to-[#E9DCD3] p-2 sm:p-4 md:p-6 lg:p-8 flex items-center justify-center font-sans selection:bg-[#7C9070]/20">
       
       {/* Sleek Tablet Frame matching FocusMate Mockup */}
-      <div className="w-full max-w-[1400px] h-full min-h-[92vh] bg-white rounded-[2.5rem] md:rounded-[3rem] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.15)] border-4 sm:border-8 border-slate-900/90 flex flex-col md:flex-row overflow-hidden relative">
+      <div className="workspace-frame w-full max-w-[1400px] h-full min-h-[92vh] bg-white rounded-[2.5rem] md:rounded-[3rem] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.15)] border-4 sm:border-8 border-slate-900/90 flex flex-col md:flex-row overflow-hidden relative">
         
         {/* Subtle camera punch hole at top bezel of tablet */}
         <div className="hidden md:block absolute top-2 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-slate-800 border border-slate-700/60 z-50 pointer-events-none" />
@@ -292,7 +292,7 @@ function PulseApp() {
 
                 {activeTab === 'assistant' && (
                   <AIAssistantView 
-                    onNavigateToTab={(t) => setActiveTab(t as any)} 
+                    onNavigateToTab={(t) => setActiveTab(t)} 
                     onStartFocusTimer={() => setActiveTab('zen')}
                   />
                 )}
