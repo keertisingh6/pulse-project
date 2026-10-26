@@ -165,6 +165,12 @@ export const DistractionFreeModeView: React.FC<{ onExit?: () => void }> = ({ onE
     }
   };
 
+  const handleSelectSound = (sound: 'rain' | 'whitenoise' | 'off') => {
+    if (sound === 'off') stopAmbientSound();
+    else startAmbientSound(sound);
+    setAmbientSound(sound);
+  };
+
   useEffect(() => {
     return () => {
       stopAmbientSound();
@@ -368,6 +374,13 @@ export const DistractionFreeModeView: React.FC<{ onExit?: () => void }> = ({ onE
 
   return (
     <div className="focus-studio-view relative min-h-[620px] rounded-[2.5rem] bg-gradient-to-b from-[#18231E] via-[#121B17] to-[#0A100E] text-white p-6 sm:p-8 md:p-12 shadow-2xl flex flex-col justify-between overflow-hidden border border-emerald-950/40 select-none">
+      <header className="focus-studio-hero app-page-hero">
+        <div className="focus-studio-hero-copy">
+          <span className="app-page-kicker"><i /> YOUR SPACE TO RESET</span>
+          <h1>Focus Studio <Sparkles size={24} aria-hidden="true" /></h1>
+          <p>A calm place to study, do deep work, and build consistency.</p>
+        </div>
+      </header>
       
       {/* Background ambient subtle glow */}
       <div className={`absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full blur-3xl pointer-events-none transition-all duration-1000 ${
@@ -585,6 +598,25 @@ export const DistractionFreeModeView: React.FC<{ onExit?: () => void }> = ({ onE
 
         </div>
       </div>
+
+      <aside className="focus-environment-panel">
+        <section className="focus-sounds-card">
+          <div className="resources-panel-heading"><div><span className="app-page-kicker">SETTLE IN</span><h2>Ambient sounds</h2></div></div>
+          <div className="focus-sound-options">
+            {([
+              ['off', 'Quiet', '◌'],
+              ['rain', 'Gentle rain', '☂'],
+              ['whitenoise', 'White noise', '〰'],
+            ] as const).map(([sound, label, glyph]) => <button type="button" key={sound} className={ambientSound === sound ? 'active' : ''} onClick={() => handleSelectSound(sound)}><span>{glyph}</span><b>{label}</b></button>)}
+          </div>
+        </section>
+        <blockquote className="focus-motivation-note">“ Small steps every day lead to big results. ”<span>Choose one thing. That’s enough for now.</span></blockquote>
+        <section className="focus-tasks-card">
+          <div className="resources-panel-heading"><div><span className="app-page-kicker">ONE NEXT STEP</span><h2>Focus tasks</h2></div></div>
+          {state.commitments.filter(item => !item.completed).slice(0, 4).map(item => <div className="focus-task-row" key={item.id}><span className="focus-task-dot" /><span><b>{item.title}</b><small>{item.subject || item.type}</small></span><small>{item.estimatedEffort || 'A little at a time'}</small></div>)}
+          {state.commitments.filter(item => !item.completed).length === 0 && <p className="assistant-empty-state">A clear list is a good place to start.</p>}
+        </section>
+      </aside>
 
       {/* FOCUS STATISTICS BAR */}
       <div className="relative z-10 pt-5 border-t border-white/10 grid grid-cols-2 sm:grid-cols-4 gap-3 text-left">
