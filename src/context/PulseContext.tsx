@@ -3,12 +3,6 @@ import {
   Commitment, FocusSession, DailyPlanItem, PulseState, 
   PulseUser, Goal, StudentProfile, AssistantMessage, CommitmentType 
 } from '../types';
-import { 
-  memeManager, 
-  UserActivityType, 
-  UserActivityContext, 
-  MemeTextReaction 
-} from '../services/memeManager';
 import { testConnection } from '../services/firebase';
 import { isTaskOverdue } from '../utils/deadlineUtils';
 import { 
@@ -42,8 +36,6 @@ interface PulseContextType {
   // Profile & Setup
   updateProfile: (profile: Partial<StudentProfile>) => void;
   updateUserName: (name: string) => void;
-  setMemePersonalityMode: (mode: 'off' | 'college_friend' | 'full_desi') => void;
-  getMemeReaction: (activity: UserActivityType | UserActivityContext) => MemeTextReaction;
 
   // Commitments (DROP -> UNDERSTAND -> CONFIRM -> PLAN -> ACT)
   extractFromInput: (text: string, fileData?: string, mimeType?: string, fileName?: string) => Promise<Omit<Commitment, 'id' | 'createdAt'>[]>;
@@ -96,7 +88,6 @@ const CLEAN_INITIAL_STATE: PulseState = {
   streakDays: 0,
   userName: '',
   aiProvider: 'gemini',
-  memePersonalityMode: 'college_friend',
 };
 
 const PulseContext = createContext<PulseContextType | undefined>(undefined);
@@ -286,40 +277,6 @@ export const PulseProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       userName: name,
       user: prev.user ? { ...prev.user, name } : null,
     }));
-  };
-
-  const setMemePersonalityMode = (mode: 'off' | 'college_friend' | 'full_desi') => {
-    setState(prev => ({
-      ...prev,
-      memePersonalityMode: mode,
-    }));
-  };
-
-  const getMemeReaction = (activity: UserActivityType | UserActivityContext): MemeTextReaction => {
-    const context: UserActivityContext = typeof activity === 'string'
-      ? { type: activity }
-      : { ...activity };
-
-    if (!context.personalityMode) {
-      context.personalityMode = state.memePersonalityMode || 'college_friend';
-    }
-    if (!context.userName) {
-      context.userName = state.userName || state.user?.name || 'Bhai';
-    }
-    if (context.activeCount === undefined) {
-      context.activeCount = state.commitments.filter(c => !c.completed).length;
-    }
-    if (context.streakDays === undefined) {
-      context.streakDays = state.streakDays;
-    }
-    if (context.hasConflicts === undefined) {
-      context.hasConflicts = Boolean(state.planConflicts && state.planConflicts.length > 0);
-    }
-    if (context.overdueCount === undefined) {
-      context.overdueCount = state.commitments.filter(c => isTaskOverdue(c)).length;
-    }
-
-    return memeManager.getReactionForActivity(context);
   };
 
   // Document/PDF extraction temporarily disabled
@@ -626,8 +583,6 @@ export const PulseProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         clearError,
         updateProfile,
         updateUserName,
-        setMemePersonalityMode,
-        getMemeReaction,
         extractFromInput,
         importCommitments,
         addCommitment,
