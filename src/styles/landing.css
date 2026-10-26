@@ -661,4 +661,11 @@
 #pulse-workspace [class~="bg-[#7C9070]/20"] { background-color: #e2d9f1 !important; }
 #pulse-workspace [class~="bg-[#7C9070]/30"] { background-color: #d5c9e9 !important; }
 #pulse-workspace [class~="bg-[#7C9070]/40"] { background-color: #a895d0 !important; }
+#pulse-workspace .demo-data-panel { border-color: rgba(255,255,255,.96) !important; background: linear-gradient(110deg,#fffdfa,#f0eafb) !important; }
+#pulse-workspace .demo-data-icon { color: #725bac; background: #e9e1f5; }
+#pulse-workspace .demo-data-badge { padding: 4px 7px; border-radius: 99px; color: #4d7b69; background: #e5f1e9; font-size: 8px; font-weight: 700; }
+#pulse-workspace .demo-data-action { color: #fff; background: #725bac; box-shadow: 0 6px 15px rgba(103,81,157,.19); }
+#pulse-workspace .demo-data-action:hover { background: #604a9d; transform: translateY(-1px); }
+.demo-preview-link { padding: 0; border: 0; color: #604c91; background: transparent; font-family: inherit; cursor: pointer; }
+.demo-preview-link:hover { color: #453474; }
 
