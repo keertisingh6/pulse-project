@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { PulseProvider, usePulse } from './context/PulseContext';
-import { LoginPage } from './components/LoginPage';
+import { PulseLandingPage } from './components/PulseLandingPage';
 import { PersonalSetup } from './components/PersonalSetup';
 import { FocusMateDashboard } from './components/FocusMateDashboard';
 import { DailyPlannerView } from './components/DailyPlannerView';
@@ -42,7 +42,7 @@ function PulseApp() {
 
   // App Access Check: allow entering Pulse without requiring authentication
   if (!state.hasEnteredWorkspace && !state.user && state.commitments.length === 0) {
-    return <LoginPage />;
+    return <PulseLandingPage />;
   }
 
   // Personal Setup Guard for fresh onboardings
@@ -323,4 +323,5 @@ export default function App() {
     </PulseProvider>
   );
 }
+
 
