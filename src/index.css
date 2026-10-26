@@ -1,61 +1,49 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap');
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-@theme {
-  --font-sans: "Plus Jakarta Sans", "Inter", -apple-system, ui-sans-serif, system-ui, sans-serif;
-  --font-serif: "Playfair Display", Georgia, serif;
-  --font-display: "Plus Jakarta Sans", -apple-system, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+@layer base {
+  body {
+    background-color: #F8F7FB;
+    color: #1E1B4B;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
 }
 
-/* Base resets & styles aligning with Artistic Flair Theme */
-body {
-  font-family: var(--font-sans);
-  background-color: #FAF9F6;
-  color: #1A1A1B;
-  overflow-x: hidden;
-}
-
-/* Beautiful custom animations for a premium Headspace/Finch vibe */
-@keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-8px); }
-}
-
-@keyframes breathe {
-  0%, 100% { transform: scale(1); opacity: 0.9; }
-  50% { transform: scale(1.08); opacity: 1; }
-}
-
-@keyframes slow-pulse {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 0.3; }
-}
-
-.animate-float {
-  animation: float 6s ease-in-out infinite;
-}
-
-.animate-breathe {
-  animation: breathe 8s ease-in-out infinite;
-}
-
-.animate-slow-pulse {
-  animation: slow-pulse 4s infinite ease-in-out;
-}
-
-/* Custom scrollbars */
+/* Custom soft scrollbar */
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
 }
+
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+
 ::-webkit-scrollbar-thumb {
-  background: rgba(124, 144, 112, 0.2);
+  background: #E2DBF2;
   border-radius: 9999px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(124, 144, 112, 0.4);
+  background: #C4B5FD;
+}
+
+/* Glass & soft glow utilities */
+.shadow-soft {
+  box-shadow: 0 4px 20px -2px rgba(124, 92, 252, 0.06), 0 2px 6px -1px rgba(0, 0, 0, 0.03);
+}
+
+.shadow-card {
+  box-shadow: 0 10px 30px -4px rgba(99, 102, 241, 0.05), 0 4px 12px -2px rgba(0, 0, 0, 0.03);
+}
+
+.shadow-elevated {
+  box-shadow: 0 20px 40px -10px rgba(30, 27, 75, 0.09), 0 10px 20px -5px rgba(0, 0, 0, 0.04);
+}
+
+.shadow-glow {
+  box-shadow: 0 4px 20px 0 rgba(124, 92, 252, 0.35);
 }

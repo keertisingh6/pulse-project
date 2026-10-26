@@ -1,6 +1,0 @@
-{
-  "name": "Pulse",
-  "description": "The single, human-friendly home for all your commitments. Intelligent student life, assignments, focus sessions, and mindful daily planning.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
