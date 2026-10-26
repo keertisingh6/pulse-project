@@ -29,6 +29,12 @@ export const AssignmentsDatabaseView: React.FC = () => {
 
   // Collect subjects
   const allSubjects = Array.from(new Set(state.commitments.map(c => c.subject).filter(Boolean))) as string[];
+  const subjectCards = allSubjects.slice(0, 6).map((subject, index) => {
+    const items = state.commitments.filter(item => item.subject === subject);
+    const complete = items.filter(item => item.completed).length;
+    const progress = items.length ? Math.round(complete / items.length * 100) : 0;
+    return { subject, items: items.length, complete, progress, tone: ['sage', 'rose', 'sand', 'lilac', 'mint', 'blue'][index] };
+  });
 
   // Filter commitments
   const filtered = state.commitments.filter(c => {
@@ -75,20 +81,20 @@ export const AssignmentsDatabaseView: React.FC = () => {
   const urgentCount = state.commitments.filter(c => !c.completed && c.priority === 'high').length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 academics-page" id="academics-page">
       
       {/* Notion / FocusMate Database Header */}
-      <div className="bg-white border border-[#EBE9E0] rounded-[2rem] p-6 md:p-8 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="academics-page-hero app-page-hero">
         <div className="space-y-1.5">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#7C9070]/10 text-[#7C9070] rounded-full text-xs font-semibold">
-            <BookOpen className="w-3.5 h-3.5" />
-            <span>Master Coursework Registry</span>
+              <BookOpen className="w-3.5 h-3.5" />
+            <span>YOUR COURSES, IN ONE PLACE</span>
           </div>
-          <h2 className="text-2xl md:text-3xl font-bold text-[#1A1A1B] tracking-tight">
-            Assignments & Exams Database
-          </h2>
-          <p className="text-xs md:text-sm text-[#1A1A1B]/60 max-w-xl">
-            Central repository for syllabus deadlines, project deliverables, problem sets, and lab tests.
+          <h1>
+            Academics
+          </h1>
+          <p>
+            Your subjects, coursework, and upcoming academic work in one place.
           </p>
         </div>
 
@@ -102,6 +108,14 @@ export const AssignmentsDatabaseView: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {subjectCards.length > 0 && <section className="academics-subject-grid" aria-label="Your subjects">
+        {subjectCards.map(({ subject, items, complete, progress, tone }) => <button type="button" key={subject} onClick={() => { setSelectedSubject(subject); setSelectedStatus('all'); }} className={`academics-subject-card tone-${tone}`}>
+          <span className="academics-subject-icon"><BookOpen size={17} /></span>
+          <span className="academics-subject-copy"><b>{subject}</b><small>{complete}/{items} coursework complete</small></span>
+          <span className="academics-subject-progress" style={{ background: `conic-gradient(#355d49 ${progress}%, #e6e3db 0)` }}><i>{progress}%</i></span>
+        </button>)}
+      </section>}
 
       {/* Summary Chips */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
@@ -446,3 +460,4 @@ export const AssignmentsDatabaseView: React.FC = () => {
     </div>
   );
 };
+
