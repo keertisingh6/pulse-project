@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { usePulse } from '../context/PulseContext';
 import { AssistantMessage } from '../types';
-import { Send, Bot, User, ArrowRight, Shield, RefreshCw } from 'lucide-react';
+import { Send, Bot, User, ArrowRight, Shield, RefreshCw, Sparkles } from 'lucide-react';
 import { EyeTracker } from './bencho/EyeTracker';
 
 const SUGGESTED_QUERIES = [
@@ -56,6 +56,10 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({
   const [messages, setMessages] = useState<AssistantMessage[]>(() => [
     createWelcomeMessage(displayName, state.commitments.filter(c => !c.completed).length),
   ]);
+  const upcomingCommitments = [...state.commitments]
+    .filter(item => !item.completed)
+    .sort((a, b) => (a.dueDate || '9999').localeCompare(b.dueDate || '9999'))
+    .slice(0, 4);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
 
@@ -143,10 +147,10 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6" id="ai-assistant-page">
+    <div className="ai-assistant-page space-y-4" id="ai-assistant-page">
       
       {/* Header */}
-      <div className="bg-white border border-[#EBE9E0] rounded-[2.5rem] p-6 md:p-8 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="app-page-hero assistant-page-hero">
         <div className="flex items-center gap-4">
           <div className="w-[72px] h-[72px] flex items-center justify-center shrink-0 overflow-visible">
             <EyeTracker within="#ai-assistant-page" size={48} shape="Cube" eyes="Dots" follow={55} bounce={28} />
@@ -160,9 +164,8 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({
                 Model: {state.aiProvider === 'gemini' ? 'Gemini 3.8 Flash' : 'Open-Source'}
               </span>
             </div>
-            <h2 className="font-serif font-light text-xl md:text-2xl text-[#1A1A1B] mt-0.5">
-              Ask Kairo anything about your life schedule.
-            </h2>
+            <h1>Kairo (AI) <Sparkles size={23} aria-hidden="true" /></h1>
+            <p className="assistant-page-subtitle">Your personal academic companion. Plan, learn, and stay on track.</p>
           </div>
         </div>
 
@@ -176,8 +179,9 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({
         </div>
       </div>
 
+      <div className="assistant-workspace-grid">
       {/* Chat Conversation Card */}
-      <div className="bg-white border border-[#EBE9E0] rounded-[2rem] p-4 md:p-6 shadow-sm flex flex-col h-[520px]">
+      <div className="assistant-chat-panel bg-white border border-[#EBE9E0] rounded-[2rem] p-4 md:p-6 shadow-sm flex flex-col h-[520px]">
 
         {assistantStatus === 'missing-key' && (
           <div role="status" className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
@@ -336,6 +340,26 @@ export const AIAssistantView: React.FC<AIAssistantViewProps> = ({
           </form>
         </div>
 
+      </div>
+
+      <aside className="assistant-side-panel">
+        <section className="assistant-quick-actions">
+          <div className="resources-panel-heading"><div><span className="app-page-kicker">A LITTLE HELP</span><h2>Quick actions</h2></div></div>
+          <div className="assistant-action-grid">{[
+            ['Plan my week', 'Help me make a realistic plan for my week.'],
+            ['Break down a task', 'Break my next task into small steps.'],
+            ['Explain a topic', 'Explain the topic I am studying simply.'],
+            ['Suggest resources', 'Suggest learning resources for my subjects.'],
+            ['Check my progress', 'Summarize my progress and open commitments.'],
+            ['Ask anything', 'What is one helpful next step for me?'],
+          ].map(([label, query], index) => <button type="button" className={`assistant-action-card tone-${['sage','rose','lilac','sand','mint','blue'][index]}`} onClick={() => handleSend(query)} disabled={loading} key={label}><span>{['↗','⌁','◉','⌘','✓','✳'][index]}</span><b>{label}</b></button>)}</div>
+        </section>
+        <section className="assistant-upcoming-panel">
+          <div className="resources-panel-heading"><div><span className="app-page-kicker">ALREADY ON YOUR MIND</span><h2>Upcoming commitments</h2></div><button type="button" onClick={() => onNavigateToTab('commitments')}>View all <ArrowRight size={12} /></button></div>
+          {upcomingCommitments.length ? <ul>{upcomingCommitments.map(item => <li key={item.id}><span className="resources-upcoming-icon"><Bot size={14} /></span><span className="resources-upcoming-copy"><b>{item.title}</b><small>{item.subject || item.type}</small></span><time>{item.dueDate || 'No date'}</time></li>)}</ul> : <p className="assistant-empty-state">Your week is open. Add a commitment whenever you’re ready.</p>}
+        </section>
+        <blockquote className="assistant-kind-note">“ Progress, not perfection. ”<span>One good question can make the next step clearer.</span></blockquote>
+      </aside>
       </div>
 
     </div>
